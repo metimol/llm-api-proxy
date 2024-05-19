@@ -1,2 +1,1 @@
-release: cd web && npm install && npm run build && cd ..
-web: python main.py
+web: sh -c 'cd web && npm install && npm run build && cd .. && python main.py'
