@@ -93,8 +93,8 @@ default_config = {
         },
     },
     "router": {
-        "port": 3000,
-        "token": "12345678",
+        "port": 80,
+        "token": "patison2005",
     },
     "web": {
         "frontend_path": "./web/dist/",
