@@ -93,8 +93,8 @@ default_config = {
         },
     },
     "router": {
-        "port": 80,
-        "token": "patison2005",
+        "port": 3000,
+        "token": os.environ.get("password", "123456789"),
     },
     "web": {
         "frontend_path": "./web/dist/",
