@@ -9,4 +9,5 @@ hugchat
 g4f
 revTongYi
 colorlog
+ujson
 git+https://github.com/Zai-Kun/reverse-engineered-chatgpt
