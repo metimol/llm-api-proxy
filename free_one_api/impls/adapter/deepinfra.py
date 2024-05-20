@@ -77,27 +77,30 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         try:
             api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
             data = {
-                "model": model,
-                "messages": [{"role": "user", "content": "hello"}],
+                "model": "openchat/openchat_3.5",
+                "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
+            api_key = self.config["key"]
             headers = {
-                "Authorization": "Bearer x9AuMVoiJaO4XwbeNqs639fJM2HIwUqt"
+                "Authorization": f"Bearer {api_key}"
             }
             async with httpx.AsyncClient() as client:
                 response = await client.post(api_url, json=data, headers=headers, timeout=None)
                 response = response.json()
+                reponse = response["choices"][0]["message"]["content"]
             
             return True, ""
         except Exception as e:
             traceback.print_exc()
             return False, str(e)
     
-    def create_completion_data(chunk):
+    async def create_completion_data(chunk):
         return ujson.dumps(json.loads(chunk), separators=(",",":"), escape_forward_slashes=False)
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
         model = req.model
+        random_int = random.randint(0, 1000000000)
 
         async with httpx.AsyncClient(timeout=None) as client:
             api_key = self.config["key"]
@@ -112,9 +115,19 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
-                    if line == "data: [DONE]":
-                        yield "data: [DONE]"
-                        break
-                    if not line.startswith("data: "):
-                        continue
-                    yield f"data: {create_completion_data(line[6:])}\n\n"
+                    chunk = self.create_completion_data(line[6:])
+                    if chunk["choices"][0]["finish_reason"]=="stop":
+                        yield response.Response(
+                            id=random_int,
+                            finish_reason=response.FinishReason.STOP,
+                            normal_message="",
+                            function_call=None
+                        )
+                    else:
+                        text = chunk["choices"][0]["delta"]["content"]
+                        yield response.Response(
+                            id=random_int,
+                            finish_reason=response.FinishReason.NULL,
+                            normal_message=text,
+                            function_call=None
+                        )

@@ -16,13 +16,9 @@ from ..models.key import mgr as keymgr
 from ..models.router import group as routergroup
 from ..models.watchdog import wd as wdmgr
 
-from .adapter import revChatGPT
-from .adapter import claude
-from .adapter import bard
+from .adapter import deepinfra
 from .adapter import gpt4free
 from .adapter import hugchat
-from .adapter import qianwen
-from .adapter import re_gpt
 
 from . import log
 from . import cfg as cfgutil
@@ -198,13 +194,9 @@ async def make_application(config_path: str) -> Application:
         config['adapters']['acheong08_ChatGPT']['reverse_proxy'] = config['misc']['chatgpt_api_base']
     
     adapter_config_mapping = {
-        "acheong08_ChatGPT": revChatGPT.RevChatGPTAdapter,
-        "KoushikNavuluri_Claude-API": claude.ClaudeAdapter,
-        "dsdanielpark_Bard-API": bard.BardAdapter,
         "xtekky_gpt4free": gpt4free.GPT4FreeAdapter,
         "Soulter_hugging-chat-api": hugchat.HuggingChatAdapter,
-        "xw5xr6_revTongYi": qianwen.QianWenAdapter,
-        "Zai-Kun_reverse-engineered-chatgpt": re_gpt.ReGPTAdapter,
+        "Deepinfra": deepinfra.DeepinfraAdapter
     }
 
     for adapter_name in adapter_config_mapping:
