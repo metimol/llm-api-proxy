@@ -1,0 +1,120 @@
+import typing, traceback, uuid, random, requests, ujson, httpx, json
+
+from ...models import adapter
+from ...models.adapter import llm
+from ...entities import request
+from ...entities import response, exceptions
+from ...models.channel import evaluation
+
+
+@adapter.llm_adapter
+class DeepinfraAdapter(llm.LLMLibAdapter):
+    
+    @classmethod
+    def name(cls) -> str:
+        return "Deepinfra/Deepinfra-API"
+    
+    @classmethod
+    def description(self) -> str:
+        return "Use Deepinfra/Deepinfra-API to access official deepinfra API."
+
+    def supported_models(self) -> list[str]:
+        return [
+            "bigcode/starcoder2-15b",
+            "openchat/openchat_3.5",
+            "lizpreciatior/lzlv_70b_fp16_hf",
+            "codellama/CodeLlama-34b-Instruct-hf",
+            "DeepInfra/pygmalion-13b-4bit-128g",
+            "deepinfra/airoboros-70b",
+            "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "mistralai/Mixtral-8x22B-Instruct-v0.1",
+            "HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            "mistralai/Mistral-7B-Instruct-v0.2",
+            "cognitivecomputations/dolphin-2.6-mixtral-8x7b",
+            "meta-llama/Llama-2-7b-chat-hf",
+            "codellama/CodeLlama-70b-Instruct-hf",
+            "meta-llama/Llama-2-70b-chat-hf",
+            "meta-llama/Llama-2-13b-chat-hf",
+            "meta-llama/Meta-Llama-3-70B-Instruct",
+            "meta-llama/Meta-Llama-3-8B-Instruct",
+            "google/gemma-7b-it",
+            "google/gemma-1.1-7b-it",
+            "llava-hf/llava-1.5-7b-hf",
+            "databricks/dbrx-instruct",
+            "microsoft/WizardLM-2-8x22B",
+            "microsoft/WizardLM-2-7B"
+        ]
+
+    def function_call_supported(self) -> bool:
+        return False
+
+    def stream_mode_supported(self) -> bool:
+        return True    
+
+    def multi_round_supported(self) -> bool:
+        return True
+    
+    @classmethod
+    def config_comment(cls) -> str:
+        return \
+"""Please provide your Deepinfra API key:
+
+{
+    "key": "your_api_key"
+}
+"""
+    
+    @classmethod
+    def supported_path(self) -> str:
+        return "/v1/chat/completions"
+    
+    def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
+        self.config = config
+        self.eval = eval
+    
+    async def test(self) -> typing.Union[bool, str]:
+        try:
+            api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
+            data = {
+                "model": model,
+                "messages": [{"role": "user", "content": "hello"}],
+            }
+            headers = {
+                "Authorization": "Bearer x9AuMVoiJaO4XwbeNqs639fJM2HIwUqt"
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.post(api_url, json=data, headers=headers, timeout=None)
+                response = response.json()
+            
+            return True, ""
+        except Exception as e:
+            traceback.print_exc()
+            return False, str(e)
+    
+    def create_completion_data(chunk):
+        return ujson.dumps(json.loads(chunk), separators=(",",":"), escape_forward_slashes=False)
+
+    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
+        messages = req.messages
+        model = req.model
+
+        async with httpx.AsyncClient(timeout=None) as client:
+            api_key = self.config["key"]
+            headers = {
+                "Authorization": f"Bearer {api_key}"
+            }
+            data = {
+                "model": model,
+                "messages": messages,
+                "stream": True
+            }
+            async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line == "data: [DONE]":
+                        yield "data: [DONE]"
+                        break
+                    if not line.startswith("data: "):
+                        continue
+                    yield f"data: {create_completion_data(line[6:])}\n\n"
