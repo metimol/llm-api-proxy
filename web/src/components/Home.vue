@@ -43,13 +43,7 @@ onresize = () => {
                     Makes reverse engineering LLM libs a OpenAI format API.
                 </p>
                 <p>
-                    The source code and documents of this project are available on 
-                    <a href="https://github.com/RockChinQ/free-one-api">
-                        GitHub
-                    </a>
-                </p>
-                <p>
-                    Built by <a href="https://rockchin.top">RockChinQ</a>
+                    Built by <a href="https://github.com/Metimol1">Metimol</a>
                 </p>
             </div>
         </div>

@@ -1,6 +1,0 @@
-* [Home Page](/en/)
-* [Deployment](/en/Setup)
-* [Usage](/en/Usage)
-* [Adapters](/en/Adapters)
-* [Config File](/en/Config)
-* [Demo](/en/Demo)

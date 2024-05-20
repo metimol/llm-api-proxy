@@ -1,1 +1,0 @@
-web: sh -c 'cd web && npm install && npm run build && cd .. && python main.py'
