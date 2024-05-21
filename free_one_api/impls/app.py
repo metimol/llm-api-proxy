@@ -175,10 +175,10 @@ async def make_application(config_path: str) -> Application:
     from ..common import randomad
 
     # make database manager
-    from .database import sqlite as sqlitedb
+    from .database import mysql as mysqldb
     
     dbmgr_cls_mapping = {
-        "sqlite": sqlitedb.SQLiteDB,
+        "mysql": mysqldb.MySQLDB,
     }
     
     dbmgr = dbmgr_cls_mapping[config['database']['type']](config['database'])
