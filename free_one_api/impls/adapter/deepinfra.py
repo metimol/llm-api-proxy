@@ -122,6 +122,12 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                         line_content = line[6:]
                         try:
                             if line=="[DONE]":
+                                yield response.Response(
+                                    id=random_int,
+                                    finish_reason=response.FinishReason.STOP,
+                                    normal_message="",
+                                    function_call=None
+                                )
                                 break
                             chunk = await self.create_completion_data(line_content)
                         except ValueError as e:
@@ -133,4 +139,3 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                             normal_message=text,
                             function_call=None
                         )
-                
