@@ -50,8 +50,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
 
     def supported_models(self) -> list[str]:
         return [
-            "gpt-3.5-turbo",
-            "gpt-4"
+            "gpt-3.5-turbo"
         ]
 
     def function_call_supported(self) -> bool:
@@ -66,10 +65,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
     @classmethod
     def config_comment(cls) -> str:
         return \
-"""GPT4Free is so unstable that it is not recommended to use.
-You don't need to provide any authentification.
-
-Please refer to https://github.com/xtekky/gpt4free
+"""You don't need to provide any authentification.
 """
 
     @classmethod
