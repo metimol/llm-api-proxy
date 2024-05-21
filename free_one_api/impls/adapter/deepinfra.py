@@ -128,7 +128,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                                     normal_message="",
                                     function_call=None
                                 )
-                                break
                             chunk = await self.create_completion_data(line_content)
                             text = chunk["choices"][0]["delta"]["content"]
                             yield response.Response(
