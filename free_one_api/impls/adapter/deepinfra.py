@@ -9,11 +9,11 @@ from ...models.channel import evaluation
 
 @adapter.llm_adapter
 class DeepinfraAdapter(llm.LLMLibAdapter):
-    
+
     @classmethod
     def name(cls) -> str:
         return "Deepinfra/Deepinfra-API"
-    
+
     @classmethod
     def description(self) -> str:
         return "Use Deepinfra/Deepinfra-API to access official deepinfra API."
@@ -54,7 +54,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
     def multi_round_supported(self) -> bool:
         return True
-    
+
     @classmethod
     def config_comment(cls) -> str:
         return \
@@ -64,15 +64,15 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     "key": "your_api_key"
 }
 """
-    
+
     @classmethod
     def supported_path(self) -> str:
         return "/v1/chat/completions"
-    
+
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
-    
+
     async def test(self) -> typing.Union[bool, str]:
         try:
             api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
@@ -88,12 +88,12 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 response = await client.post(api_url, json=data, headers=headers, timeout=None)
                 response = response.json()
                 reponse = response["choices"][0]["message"]["content"]
-            
+
             return True, ""
         except Exception as e:
             traceback.print_exc()
             return False, str(e)
-    
+
     async def create_completion_data(self, chunk):
         try:
             return ujson.loads(chunk)
@@ -120,14 +120,15 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 async for line in model_response.aiter_lines():
                     if line:
                         line_content = line[6:]
+                        if line_content == "[DONE]":
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.STOP,
+                                normal_message="",
+                                function_call=None
+                            )
+                            break
                         try:
-                            if line_content=="[DONE]":
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.STOP,
-                                    normal_message="",
-                                    function_call=None
-                                )
                             chunk = await self.create_completion_data(line_content)
                             text = chunk["choices"][0]["delta"]["content"]
                             yield response.Response(
