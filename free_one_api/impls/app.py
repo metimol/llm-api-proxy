@@ -79,7 +79,7 @@ default_config = {
     "1-documentation": "see at https://github.com/RockChinQ/free-one-api",
     "database": {
         "type": "sqlite",
-        "path": "./data/free_one_api.db",
+        "path": "/app/data/free_one_api.db",
     },
     "watchdog": {
         "heartbeat": {
