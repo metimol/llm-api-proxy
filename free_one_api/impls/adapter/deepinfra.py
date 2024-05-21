@@ -94,7 +94,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             traceback.print_exc()
             return False, str(e)
     
-    async def create_completion_data(chunk):
+    async def create_completion_data(self, chunk):
         return ujson.dumps(json.loads(chunk), separators=(",",":"), escape_forward_slashes=False)
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
