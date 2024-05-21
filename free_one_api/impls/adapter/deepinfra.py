@@ -95,7 +95,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             return False, str(e)
     
     async def create_completion_data(self, chunk):
-        return ujson.dumps(json.loads(chunk), separators=(",",":"), escape_forward_slashes=False)
+        return ujson.loads(chunk)
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
@@ -116,7 +116,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
                     chunk = await self.create_completion_data(line[6:])
-                    chunk = ujson.loads(chunk)
                     if chunk["choices"][0]["finish_reason"]=="stop":
                         yield response.Response(
                             id=random_int,
