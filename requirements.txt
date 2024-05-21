@@ -1,5 +1,5 @@
 quart
-aiosqlite
+aiomysql
 PyYaml
 revChatGPT
 tiktoken
