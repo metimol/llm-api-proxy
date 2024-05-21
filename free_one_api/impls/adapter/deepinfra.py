@@ -95,7 +95,10 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             return False, str(e)
     
     async def create_completion_data(self, chunk):
-        return ujson.loads(chunk)
+        try:
+            return ujson.loads(chunk)
+        except ValueError as e:
+            raise ValueError(f"Ошибка при загрузке JSON из chunk: {e}\nchunk: {chunk}")
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
