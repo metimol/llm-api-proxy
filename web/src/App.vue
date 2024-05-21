@@ -50,7 +50,7 @@ function logout(){
         <div id="logo_container" class="flex_container">
             <a class="no_url_style flex_container" href="/">
                 <img id="logo" src="./assets/logo.png" alt="logo">
-                <text id="project_name">Free One API</text></a>
+                <text id="project_name">LLM API</text></a>
         </div>
         <div class="tab_btn flex_container" @click="switchTab('home')">Home</div>
         <div class="tab_btn flex_container" @click="switchTab('channel')">Channels</div>

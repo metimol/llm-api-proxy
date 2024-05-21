@@ -72,14 +72,10 @@ onresize = () => {
 }
 
 const adapter_color = {
-    "acheong08/ChatGPT": "#00BB00",
-    "KoushikNavuluri/Claude-API": "#dfd6c8",
-    "dsdanielpark/Bard-API": "#AACAFF",  // 168,199,250
+    "Deepinfra/Deepinfra-API": "#AACAFF",
     "xtekky/gpt4free": "#CC33FF",
-    "acheong08/EdgeGPT": "#0388FF",
     "Soulter/hugging-chat-api": "#FFBB03",
-    "xw5xr6/revTongYi": "#4040C0",
-    "Zai-Kun/reverse-engineered-chatgpt": "#00CC90",
+    "Openai/GPT": "#00CC90",
 }
 
 function deleteChannelConfirmed(channel_id) {
@@ -254,9 +250,9 @@ const showingChannelData = reactive({
 });
 const usableAdapterList = ref([]);
 const usableAdapterMap = ref({
-    "acheong08/ChatGPT": {
-        "name": "acheong08/ChatGPT",
-        "config_comment": "this is the comment"
+    "Deepinfra/Deepinfra-API": {
+        "name": "Deepinfra/Deepinfra-API",
+        "config_comment": "Config comment here."
     },
 })
 
@@ -313,7 +309,7 @@ function showCreateChannelDialog() {
         "id": "0", // -1 if this is a new channel
         "name": "",
         "adapter": {
-            "type": "acheong08/ChatGPT", // get from /api/adapter/list
+            "type": "Deepinfra/Deepinfra-API", // get from /api/adapter/list
             "config": `{}` // configuration
         },
         "model_mapping": `{}`,
