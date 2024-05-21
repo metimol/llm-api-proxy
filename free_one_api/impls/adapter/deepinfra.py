@@ -121,7 +121,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     if line:
                         line_content = line[6:]
                         try:
-                            if line=="[DONE]":
+                            if line_content=="[DONE]":
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.STOP,
