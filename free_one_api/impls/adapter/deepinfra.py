@@ -121,21 +121,16 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     if line:
                         line_content = line[6:]
                         try:
+                            if line=="[DONE]":
+                                
                             chunk = await self.create_completion_data(line_content)
                         except ValueError as e:
                             raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
-                        if chunk["choices"][0]["finish_reason"]=="stop":
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.STOP,
-                                normal_message="",
-                                function_call=None
-                            )
-                        else:
-                            text = chunk["choices"][0]["delta"]["content"]
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.NULL,
-                                normal_message=text,
-                                function_call=None
-                            )
+                        text = chunk["choices"][0]["delta"]["content"]
+                        yield response.Response(
+                            id=random_int,
+                            finish_reason=response.FinishReason.NULL,
+                            normal_message=text,
+                            function_call=None
+                        )
+                
