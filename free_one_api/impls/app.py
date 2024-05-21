@@ -19,6 +19,7 @@ from ..models.watchdog import wd as wdmgr
 from .adapter import deepinfra
 from .adapter import gpt4free
 from .adapter import hugchat
+from .adapter import gpt
 
 from . import log
 from . import cfg as cfgutil
@@ -196,7 +197,8 @@ async def make_application(config_path: str) -> Application:
     adapter_config_mapping = {
         "xtekky_gpt4free": gpt4free.GPT4FreeAdapter,
         "Soulter_hugging-chat-api": hugchat.HuggingChatAdapter,
-        "Deepinfra": deepinfra.DeepinfraAdapter
+        "Deepinfra": deepinfra.DeepinfraAdapter,
+        "GPT": gpt.GPTAdapter
     }
 
     for adapter_name in adapter_config_mapping:
