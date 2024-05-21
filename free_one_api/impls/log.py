@@ -5,17 +5,17 @@ import traceback
 from ..models.database import db
 
 
-class SQLiteHandler(logging.Handler):
-    """SQLite logging handler."""
+class MySQLHandler(logging.Handler):
+    """MySQL logging handler."""
 
     dbmgr: db.DatabaseInterface
-    
+
     queue: asyncio.Queue = None
 
     def __init__(self, dbmgr: db.DatabaseInterface, level=logging.NOTSET):
         super().__init__(level)
         self.dbmgr = dbmgr
-        
+
     async def _consumer(self):
         while True:
             try:
@@ -27,14 +27,14 @@ class SQLiteHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         """Emit a record."""
-        
+
         if 'free_one_api' not in record.pathname:
             return
-        
+
         loop = asyncio.get_running_loop()
-        
+
         if self.queue is None:
             self.queue = asyncio.Queue()
             loop.create_task(self._consumer())
-            
+
         loop.create_task(self.queue.put(record))
