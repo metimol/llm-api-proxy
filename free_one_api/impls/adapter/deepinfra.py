@@ -122,7 +122,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                         line_content = line[6:]
                         try:
                             if line=="[DONE]":
-                                
+                                break
                             chunk = await self.create_completion_data(line_content)
                         except ValueError as e:
                             raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
