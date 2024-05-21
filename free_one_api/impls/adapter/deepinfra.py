@@ -118,6 +118,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
+                    print(line)
                     if line:
                         line_content = line[6:]
                         if line_content == "[DONE]":
@@ -130,6 +131,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                             break
                         try:
                             chunk = await self.create_completion_data(line_content)
+                            print(chunk)
                             text = chunk["choices"][0]["delta"]["content"]
                             yield response.Response(
                                 id=random_int,
