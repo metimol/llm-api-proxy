@@ -135,7 +135,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
-                                        normal_message=text,
+                                    normal_message=text,
                                     function_call=None
                                 )
                         except ValueError as e:
