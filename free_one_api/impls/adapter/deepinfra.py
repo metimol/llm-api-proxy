@@ -115,7 +115,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
-                    chunk = self.create_completion_data(line[6:])
+                    chunk = await self.create_completion_data(line[6:])
+                    chunk = ujson.loads(chunk)
                     if chunk["choices"][0]["finish_reason"]=="stop":
                         yield response.Response(
                             id=random_int,
