@@ -185,7 +185,7 @@ async def make_application(config_path: str) -> Application:
     await dbmgr.initialize()
     
     # database handler
-    dblogger = log.SQLiteHandler(dbmgr)
+    dblogger = log.MySQLHandler(dbmgr)
     
     # failed to set debug level for db handler
     dblogger.setLevel(logging.INFO if logging_level <= logging.INFO else logging_level)
