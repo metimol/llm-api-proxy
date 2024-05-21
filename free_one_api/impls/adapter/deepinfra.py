@@ -134,7 +134,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                                 text = chunk["choices"][0]["delta"]["content"]
                                 yield response.Response(
                                     id=random_int,
-                                finish_reason=response.FinishReason.NULL,
+                                    finish_reason=response.FinishReason.NULL,
                                         normal_message=text,
                                     function_call=None
                                 )
