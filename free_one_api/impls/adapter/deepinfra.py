@@ -118,19 +118,24 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
-                    chunk = await self.create_completion_data(line[6:])
-                    if chunk["choices"][0]["finish_reason"]=="stop":
-                        yield response.Response(
-                            id=random_int,
-                            finish_reason=response.FinishReason.STOP,
-                            normal_message="",
-                            function_call=None
-                        )
-                    else:
-                        text = chunk["choices"][0]["delta"]["content"]
-                        yield response.Response(
-                            id=random_int,
-                            finish_reason=response.FinishReason.NULL,
-                            normal_message=text,
-                            function_call=None
-                        )
+                    if line:
+                        line_content = line[6:]
+                        try:
+                            chunk = await self.create_completion_data(line_content)
+                        except ValueError as e:
+                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
+                        if chunk["choices"][0]["finish_reason"]=="stop":
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.STOP,
+                                normal_message="",
+                                function_call=None
+                            )
+                        else:
+                            text = chunk["choices"][0]["delta"]["content"]
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.NULL,
+                                normal_message=text,
+                                function_call=None
+                            )
