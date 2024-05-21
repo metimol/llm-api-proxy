@@ -98,7 +98,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         try:
             return ujson.loads(chunk)
         except ValueError as e:
-            raise ValueError(f"Ошибка при загрузке JSON из chunk: {e}\nchunk: {chunk}")
+            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
