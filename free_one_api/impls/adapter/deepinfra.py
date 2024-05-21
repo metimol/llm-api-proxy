@@ -15,7 +15,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         return "Deepinfra/Deepinfra-API"
 
     @classmethod
-    def description(self) -> str:
+    def description(cls) -> str:
         return "Use Deepinfra/Deepinfra-API to access official deepinfra API."
 
     def supported_models(self) -> list[str]:
@@ -66,7 +66,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 """
 
     @classmethod
-    def supported_path(self) -> str:
+    def supported_path(cls) -> str:
         return "/v1/chat/completions"
 
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
@@ -86,8 +86,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             }
             async with httpx.AsyncClient() as client:
                 response = await client.post(api_url, json=data, headers=headers, timeout=None)
-                response = response.json()
-                reponse = response["choices"][0]["message"]["content"]
+                response_data = response.json()
+                response_content = response_data["choices"][0]["message"]["content"]
 
             return True, ""
         except Exception as e:
@@ -129,14 +129,13 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                             )
                             break
                         try:
-                            if line_content != "[DONE]":
-                                chunk = await self.create_completion_data(line_content)
-                                text = chunk["choices"][0]["delta"]["content"]
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
+                            chunk = await self.create_completion_data(line_content)
+                            text = chunk["choices"][0]["delta"]["content"]
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.NULL,
+                                normal_message=text,
+                                function_call=None
+                            )
                         except ValueError as e:
                             raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
