@@ -95,7 +95,6 @@ class GPTAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", self.config["url"], json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
-                    print(line)
                     if line:
                         line_content = line[6:]
                         if line_content == "[DONE]":
@@ -108,7 +107,6 @@ class GPTAdapter(llm.LLMLibAdapter):
                             break
                         try:
                             chunk = await self.create_completion_data(line_content)
-                            print(chunk)
                             if chunk["choices"][0]["finish_reason"]=="stop":
                                 yield response.Response(
                                     id=random_int,
