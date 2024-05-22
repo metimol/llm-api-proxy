@@ -53,8 +53,10 @@ class GPTAdapter(llm.LLMLibAdapter):
     async def test(self) -> typing.Union[bool, str]:
         try:
             api_url = self.config["url"]
+            models = self.supported_models()
+            model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
             data = {
-                "model": "gpt-3.5-turbo",
+                "model": model,
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
             api_key = self.config["key"]
