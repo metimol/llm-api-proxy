@@ -38,7 +38,8 @@ class GPTAdapter(llm.LLMLibAdapter):
 
 {
     "key": "your_api_key",
-    "url": "your_openai_api_base"
+    "url": "your_openai_api_base",
+    "models": "Optional. Default is 'gpt-3.5-turbo'. It should be a list of available models in this API, separated by commas without spaces. For example: 'gpt4,gpt-4-o,gpt-4-turbo'
 }
 """
 
