@@ -19,9 +19,8 @@ class GPTAdapter(llm.LLMLibAdapter):
         return "Use all APIs with openai format."
 
     def supported_models(self) -> list[str]:
-        return [
-            "gpt-3.5-turbo"
-        ]
+        models_string = self.config.get("models", "gpt-3.5-turbo")
+        return models_string.split(",")
 
     def function_call_supported(self) -> bool:
         return False
