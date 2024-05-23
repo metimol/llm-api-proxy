@@ -97,9 +97,9 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         messages = req.messages
         model = req.model
         random_int = random.randint(0, 1000000000)
+        api_url = self.config["url"]
 
         async with httpx.AsyncClient(timeout=None) as client:
-            api_key = self.config["key"]
             headers = {
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
                 "Accept": "text/event-stream",
@@ -120,7 +120,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "messages": messages,
                 "stream": True
             }
-            async with client.stream("POST", self.config["url"], json=data, headers=headers) as model_response:
+            async with client.stream("POST", api_url, json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
                     if line:
