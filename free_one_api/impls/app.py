@@ -203,7 +203,8 @@ async def make_application(config_path: str) -> Application:
         "xtekky_gpt4free": gpt4free.GPT4FreeAdapter,
         "Soulter_hugging-chat-api": hugchat.HuggingChatAdapter,
         "Deepinfra": deepinfra.DeepinfraAdapter,
-        "GPT": gpt.GPTAdapter
+        "GPT": gpt.GPTAdapter,
+        "NextChat": nextchat.NextChatAdapter
     }
 
     for adapter_name in adapter_config_mapping:
