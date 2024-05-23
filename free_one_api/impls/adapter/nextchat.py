@@ -80,6 +80,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             async with httpx.AsyncClient() as client:
                 response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None)
                 response_data = response.json()
+                print(response_data)
                 response_content = response_data["choices"][0]["message"]["content"]
 
             return True, ""
