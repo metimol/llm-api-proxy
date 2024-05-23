@@ -77,7 +77,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "Connection": "keep-alive",
                 "Alt-Used": api_url,
             }
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None)
                 response_data = response.json()
                 response_content = response_data["choices"][0]["message"]["content"]
@@ -98,7 +98,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         random_int = random.randint(0, 1000000000)
         api_url = self.config["url"]
 
-        async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(timeout=None, verify=False) as client:
             headers = {
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
                 "Accept": "text/event-stream",
