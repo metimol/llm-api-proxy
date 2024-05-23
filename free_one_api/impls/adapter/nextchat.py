@@ -12,11 +12,11 @@ class GPTAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
-        return "Openai/GPT"
+        return "NextChat/GPT"
 
     @classmethod
     def description(cls) -> str:
-        return "Use all APIs with openai format."
+        return "Use NextChat with openai format."
 
     def supported_models(self) -> list[str]:
         models_string = self.config.get("models", "gpt-3.5-turbo")
@@ -37,8 +37,7 @@ class GPTAdapter(llm.LLMLibAdapter):
 """Please provide your Openai API key, and Openai API base:
 
 {
-    "key": "your_api_key",
-    "url": "your_openai_api_base",
+    "url": "your_chat_url",
     "models": "Optional. Default is 'gpt-3.5-turbo'.
 It should be a list of available models in this API, separated by commas without spaces. 
 For example: 'gpt4,gpt-4-o,gpt-4-turbo'
@@ -62,8 +61,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "model": model,
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
-            api_key = self.config["key"]
-                headers = {
+            headers = {
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
                 "Accept": "text/event-stream",
                 "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
