@@ -101,7 +101,19 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         async with httpx.AsyncClient(timeout=None) as client:
             api_key = self.config["key"]
             headers = {
-                "Authorization": f"Bearer {api_key}"
+                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
+                "Accept": "text/event-stream",
+                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "Referer": api_url,
+                "x-requested-with": "XMLHttpRequest",
+                "Origin": api_url,
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "Connection": "keep-alive",
+                "Alt-Used": api_url,
             }
             data = {
                 "model": model,
