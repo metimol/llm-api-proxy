@@ -78,7 +78,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "Alt-Used": api_url,
             }
             async with httpx.AsyncClient() as client:
-                response = await client.post(f"api_url/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None)
+                response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None)
                 response_data = response.json()
                 response_content = response_data["choices"][0]["message"]["content"]
 
@@ -120,7 +120,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "messages": messages,
                 "stream": True
             }
-            async with client.stream("POST", api_url, json=data, headers=headers) as model_response:
+            async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
                     if line:
