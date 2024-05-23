@@ -67,14 +67,14 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Content-Type": "application/json",
-                "Referer": "https://chat.fstha.com/",
+                "Referer": api_url,
                 "x-requested-with": "XMLHttpRequest",
-                "Origin": "https://chat.fstha.com",
+                "Origin": api_url,
                 "Sec-Fetch-Dest": "empty",
                 "Sec-Fetch-Mode": "cors",
                 "Sec-Fetch-Site": "same-origin",
                 "Connection": "keep-alive",
-                "Alt-Used": "chat.fstha.com",
+                "Alt-Used": api_url,
             }
             async with httpx.AsyncClient() as client:
                 response = await client.post(api_url, json=data, headers=headers, timeout=None)
