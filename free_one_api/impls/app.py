@@ -20,6 +20,7 @@ from .adapter import deepinfra
 from .adapter import gpt4free
 from .adapter import hugchat
 from .adapter import gpt
+from .adapter import nextchat
 
 from . import log
 from . import cfg as cfgutil
