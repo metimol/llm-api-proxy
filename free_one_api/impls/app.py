@@ -89,7 +89,7 @@ default_config = {
     },
     "watchdog": {
         "heartbeat": {
-            "interval": 1800,
+            "interval": 3600,
             "timeout": 300,
             "fail_limit": 3,
         },
