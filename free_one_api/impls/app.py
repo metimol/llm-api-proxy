@@ -78,7 +78,7 @@ log_colors_config = {
 }
 
 default_config = {
-    "1-documentation": "see at https://github.com/RockChinQ/free-one-api",
+    "1-documentation": "ask Metimol",
     "database": {
         "type": "mysql",
         "host": os.environ.get("DB_HOST"),
@@ -201,7 +201,6 @@ async def make_application(config_path: str) -> Application:
     
     adapter_config_mapping = {
         "xtekky_gpt4free": gpt4free.GPT4FreeAdapter,
-        "Soulter_hugging-chat-api": hugchat.HuggingChatAdapter,
         "Deepinfra": deepinfra.DeepinfraAdapter,
         "GPT": gpt.GPTAdapter,
         "NextChat": nextchat.NextChatAdapter
