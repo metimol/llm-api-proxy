@@ -60,6 +60,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             data = {
                 "model": model,
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
+                "stream": False
             }
             headers = {
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
