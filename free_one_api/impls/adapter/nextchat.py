@@ -98,7 +98,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         random_int = random.randint(0, 1000000000)
         api_url = self.config["url"]
 
-        async with httpx.AsyncClient(timeout=None, verify=False) as client:
+        async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
             headers = {
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
                 "Accept": "text/event-stream",
