@@ -91,7 +91,7 @@ default_config = {
         "heartbeat": {
             "interval": 3600,
             "timeout": 300,
-            "fail_limit": 3,
+            "fail_limit": 5,
         },
     },
     "router": {
