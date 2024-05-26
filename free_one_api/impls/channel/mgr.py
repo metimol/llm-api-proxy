@@ -113,6 +113,8 @@ class ChannelManager(mgr.AbsChannelManager):
             if not res:
                 raise ValueError(error)
             latency = int((time.time() - now)*100)/100
+            if not chan.enabled:
+                chan.enabled = True
         except Exception as e:
             raise ValueError("Test failed.") from e
         finally:
