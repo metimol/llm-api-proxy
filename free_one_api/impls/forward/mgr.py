@@ -99,14 +99,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 record.error = e
                 record.success = False
                 
-                yield "data: {}\n\ndata: [DONE]\n\n".format(json.dumps({
-                    "error": {
-                        "code": e.code,
-                        "message": e.message,
-                        "type": e.type,
-                        "param": e.param,
-                    }
-                }))
+                raise ValueError("Internal server error") from e
             except Exception as e:
                 
                 record.error = e
@@ -189,28 +182,14 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             record.success = False
             
             # check for custom error raised by adapter
-            return quart.jsonify({
-                "error": {
-                    "code": e.code,
-                    "message": e.message,
-                    "type": e.type,
-                    "param": e.param,
-                }
-            }), e.status_code
+            raise ValueError("Internal server error") from e
         except Exception as e:
             record.error = e
             record.success = False
             
             logging.warning("Exception should be processed by adapter but caught by forward manager:"+str(e))
             # check for other error
-            return quart.jsonify({
-                "error": {
-                    "code": 500,
-                    "message": str(e),
-                    "type": "internal",
-                    "param": None,
-                }
-            }), 500
+            raise ValueError("Internal server error") from e
         finally:
             record.commit()
                 
