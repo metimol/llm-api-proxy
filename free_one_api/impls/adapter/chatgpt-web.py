@@ -125,8 +125,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                                 function_call=None
                             )
                 yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.STOP,
-                                normal_message="",
-                                function_call=None
-                            )
+                    id=random_int,
+                    finish_reason=response.FinishReason.STOP,
+                    normal_message="",
+                    function_call=None
+                )
