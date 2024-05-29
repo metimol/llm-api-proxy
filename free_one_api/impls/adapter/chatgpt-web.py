@@ -115,9 +115,16 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "Alt-Used": api_url,
             }
             data = {
+                "prompt": format_prompt(messages),
                 "model": model,
-                "messages": messages,
-                "stream": True
+                "options": {{}},
+                "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
+                "temperature": 0.9,
+                "presence_penalty": 0,
+                "frequency_penalty": 0,
+                "top_p": 1,
+                "max_tokens": 4000,
+                "user": str(uuid.uuid4())
             }
             async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
