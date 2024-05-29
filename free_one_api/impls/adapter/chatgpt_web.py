@@ -94,7 +94,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
 
             return True, ""
         except Exception as e:
-            return False, f"Chatgpt-Web est failed. Error: {e}"
+            return False, "Chatgpt-Web test failed."
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
