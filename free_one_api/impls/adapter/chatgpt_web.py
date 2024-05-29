@@ -71,7 +71,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             data = {
                 "prompt": await self.format_prompt(messages),
                 "model": model,
-                "options": {{}},
+                "options": dict(),
                 "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
                 "temperature": 0.9,
                 "presence_penalty": 0,
@@ -110,7 +110,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             data = {
                 "prompt": await self.format_prompt(messages),
                 "model": model,
-                "options": {{}},
+                "options": dict(),
                 "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
                 "temperature": 0.9,
                 "presence_penalty": 0,
