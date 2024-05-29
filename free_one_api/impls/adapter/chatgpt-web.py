@@ -52,11 +52,21 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         self.config = config
         self.eval = eval
 
+    async def format_prompt(messages, add_special_tokens: bool = False):
+        if not add_special_tokens and len(messages) <= 1:
+            return messages[0]["content"]
+        formatted = "\n".join([
+            f'{message["role"].capitalize()}: {message["content"]}'
+            for message in messages
+        ])
+        return f"{formatted}\nAssistant:"
+
     async def test(self) -> typing.Union[bool, str]:
         try:
             api_url = self.config["url"]
             models = self.supported_models()
             model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
+            messages = [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}]
             headers = {
                 'Accept': 'application/json, text/plain, */*',
                 'Content-Type': 'application/json',
@@ -64,7 +74,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'Connection': 'keep-alive',
             }
             data = {
-                "prompt": format_prompt(messages),
+                "prompt": await format_prompt(messages),
                 "model": model,
                 "options": {{}},
                 "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
