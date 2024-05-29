@@ -57,25 +57,23 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             api_url = self.config["url"]
             models = self.supported_models()
             model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
-            data = {
-                "model": model,
-                "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
-                "stream": False
-            }
             headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+            }
+            data = {
+                "prompt": format_prompt(messages),
+                "model": model,
+                "options": {{}},
+                "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
+                "temperature": 0.9,
+                "presence_penalty": 0,
+                "frequency_penalty": 0,
+                "top_p": 1,
+                "max_tokens": 4000,
+                "user": str(uuid.uuid4())
             }
             async with httpx.AsyncClient(verify=False) as client:
                 response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None, follow_redirects=True)
