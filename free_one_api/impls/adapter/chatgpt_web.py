@@ -52,13 +52,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         self.config = config
         self.eval = eval
 
-    async def format_prompt(messages, add_special_tokens: bool = False):
-        if not add_special_tokens and len(messages) <= 1:
-            return messages[0]["content"]
-        formatted = "\n".join([
-            f'{message["role"].capitalize()}: {message["content"]}'
-            for message in messages
-        ])
+    async def format_prompt(messages):
+        formatted = "\n".join([f'{message["role"].capitalize()}: {message["content"]}' for message in messages])
         return f"{formatted}\nAssistant:"
 
     async def test(self) -> typing.Union[bool, str]:
@@ -97,8 +92,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                             answer+=content
 
             return True, ""
-        except:
-            return False, f"Test Failed."
+        except Exception as e:
+            return False, f"Chatgpt-Web est failed. Error: {e}"
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
