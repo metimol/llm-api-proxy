@@ -115,30 +115,18 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 async for line in model_response.aiter_lines():
                     if line:
                         line = ujson.loads(line)
-                        if line_content == "[DONE]":
+                        if "detail" not in line:
+                            raise RuntimeError(f"Response: {{line}}")
+                        if content := line["detail"]["choices"][0]["delta"].get("content"):
                             yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.NULL,
+                                normal_message=content,
+                                function_call=None
+                            )
+                yield response.Response(
                                 id=random_int,
                                 finish_reason=response.FinishReason.STOP,
                                 normal_message="",
                                 function_call=None
                             )
-                            break
-                        try:
-                            chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"][0]["finish_reason"]=="stop":
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                            else:
-                                text = chunk["choices"][0]["delta"]["content"]
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                        except ValueError as e:
-                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
