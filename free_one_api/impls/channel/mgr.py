@@ -182,7 +182,7 @@ class ChannelManager(mgr.AbsChannelManager):
             raise exceptions.QueryHandlingError(
                 404,
                 "channel_not_found",
-                "No suitable channel found. You may need to contact your admin or check the documentation at https://github.com/RockChinQ/free-one-api",
+                "No suitable channel found. You may need to contact your admin.",
             )
         
         # get scores of each option
