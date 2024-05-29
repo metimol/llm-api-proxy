@@ -21,6 +21,7 @@ from .adapter import gpt4free
 from .adapter import hugchat
 from .adapter import gpt
 from .adapter import nextchat
+from .adapter import chatgpt_web
 
 from . import log
 from . import cfg as cfgutil
@@ -203,7 +204,8 @@ async def make_application(config_path: str) -> Application:
         "xtekky_gpt4free": gpt4free.GPT4FreeAdapter,
         "Deepinfra": deepinfra.DeepinfraAdapter,
         "GPT": gpt.GPTAdapter,
-        "NextChat": nextchat.NextChatAdapter
+        "NextChat": nextchat.NextChatAdapter,
+        "ChatGPTWeb": chatgpt_web.ChatGPTWebAdapter
     }
 
     for adapter_name in adapter_config_mapping:
