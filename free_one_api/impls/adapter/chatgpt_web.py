@@ -58,38 +58,39 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
 
     async def test(self) -> typing.Union[bool, str]:
         try:
-            api_url = self.config["url"]
-            models = self.supported_models()
-            model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
-            messages = [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}]
-            headers = {
-                'Accept': 'application/json, text/plain, */*',
-                'Content-Type': 'application/json',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-            }
-            data = {
-                "prompt": await self.format_prompt(messages),
-                "model": model,
-                "options": dict(),
-                "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
-                "temperature": 0.9,
-                "presence_penalty": 0,
-                "frequency_penalty": 0,
-                "top_p": 1,
-                "max_tokens": 4000,
-                "user": str(uuid.uuid4())
-            }
-            answer = ""
-            async with client.stream("POST", f"{api_url}/api/chat-process", json=data, headers=headers) as model_response:
-                model_response.raise_for_status()
-                async for line in model_response.aiter_lines():
-                    if line:
-                        line = ujson.loads(line)
-                        if "detail" not in line:
-                            raise RuntimeError(f"Response: {{line}}")
-                        if content := line["detail"]["choices"][0]["delta"].get("content"):
-                            answer+=content
+            async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
+                api_url = self.config["url"]
+                models = self.supported_models()
+                model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
+                messages = [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}]
+                headers = {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                }
+                data = {
+                    "prompt": await self.format_prompt(messages),
+                    "model": model,
+                    "options": dict(),
+                    "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
+                    "temperature": 0.9,
+                    "presence_penalty": 0,
+                    "frequency_penalty": 0,
+                    "top_p": 1,
+                    "max_tokens": 4000,
+                    "user": str(uuid.uuid4())
+                }
+                answer = ""
+                async with client.stream("POST", f"{api_url}/api/chat-process", json=data, headers=headers) as model_response:
+                    model_response.raise_for_status()
+                    async for line in model_response.aiter_lines():
+                        if line:
+                            line = ujson.loads(line)
+                            if "detail" not in line:
+                                raise RuntimeError(f"Response: {{line}}")
+                            if content := line["detail"]["choices"][0]["delta"].get("content"):
+                                answer+=content
 
             return True, ""
         except Exception as e:
