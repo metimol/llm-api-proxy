@@ -8,7 +8,7 @@ from ...models.channel import evaluation
 
 
 @adapter.llm_adapter
-class NextChatAdapter(llm.LLMLibAdapter):
+class ChatGPTWebAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
