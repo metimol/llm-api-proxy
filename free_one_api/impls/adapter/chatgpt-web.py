@@ -86,33 +86,17 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         except:
             return False, f"Test Failed. Model Response: {response_data}"
 
-    async def create_completion_data(self, chunk):
-        try:
-            return ujson.loads(chunk)
-        except ValueError as e:
-            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
-
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
         model = req.model
-        random_int = random.randint(0, 1000000000)
         api_url = self.config["url"]
 
         async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
             headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json',
+                'DNT': '1',
+                'Connection': 'keep-alive',
             }
             data = {
                 "prompt": format_prompt(messages),
@@ -126,11 +110,11 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "max_tokens": 4000,
                 "user": str(uuid.uuid4())
             }
-            async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
+            async with client.stream("POST", f"{api_url}/api/chat-process", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
                     if line:
-                        line_content = line[6:]
+                        line = ujson.loads(line)
                         if line_content == "[DONE]":
                             yield response.Response(
                                 id=random_int,
