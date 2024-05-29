@@ -116,7 +116,7 @@ class ChannelManager(mgr.AbsChannelManager):
             if not chan.enabled:
                 chan.enabled = True
         except Exception as e:
-            raise ValueError("Test failed.") from e
+            raise ValueError(error)
         finally:
             chan.latency = latency
             await self.update_channel(chan)
