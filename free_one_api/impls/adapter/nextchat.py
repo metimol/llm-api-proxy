@@ -84,7 +84,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
 
             return True, ""
         except:
-            return False, f"Test Failed. Model Response: {response_data}"
+            return False, f"Test Failed. Website type: 'NextChat'."
 
     async def create_completion_data(self, chunk):
         try:
