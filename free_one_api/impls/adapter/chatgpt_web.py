@@ -52,7 +52,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         self.config = config
         self.eval = eval
 
-    async def format_prompt(messages):
+    async def format_prompt(self, messages):
         formatted = "\n".join([f'{message["role"].capitalize()}: {message["content"]}' for message in messages])
         return f"{formatted}\nAssistant:"
 
@@ -69,7 +69,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'Connection': 'keep-alive',
             }
             data = {
-                "prompt": await format_prompt(messages),
+                "prompt": await self.format_prompt(messages),
                 "model": model,
                 "options": {{}},
                 "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
@@ -108,7 +108,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'Connection': 'keep-alive',
             }
             data = {
-                "prompt": format_prompt(messages),
+                "prompt": await self.format_prompt(messages),
                 "model": model,
                 "options": {{}},
                 "systemMessage": "You are ChatGPT. Respond in the language the user is speaking to you. Use markdown formatting in your response.",
