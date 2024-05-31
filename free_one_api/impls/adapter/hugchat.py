@@ -120,10 +120,12 @@ Please refer to https://github.com/Soulter/hugging-chat-api
                 text=prompt,
                 stream=True
             ):
+                if resp is None:
+                    continue
                 yield response.Response(
                     id=random_int,
                     finish_reason=response.FinishReason.NULL,
-                    normal_message=resp,
+                    normal_message=resp["token"],
                     function_call=None
                 )
         except Exception as e:
