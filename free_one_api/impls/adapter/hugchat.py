@@ -128,12 +128,7 @@ Please refer to https://github.com/Soulter/hugging-chat-api
                 )
         except Exception as e:
             traceback.print_exc()
-            yield response.Response(
-                id=random_int,
-                finish_reason=response.FinishReason.ERROR,
-                normal_message=str(e),
-                function_call=None
-            )
+            raise ValueError(f"Huggingchat error: {e}")
         finally:
             self.chatbot.delete_conversation(conversation_id)
 
