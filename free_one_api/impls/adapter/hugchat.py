@@ -17,20 +17,18 @@ from ...models.channel import evaluation
 
 @adapter.llm_adapter
 class HuggingChatAdapter(llm.LLMLibAdapter):
-    
+
     @classmethod
     def name(cls) -> str:
         return "Soulter/hugging-chat-api"
-    
+
     @classmethod
     def description(self) -> str:
         return "Use Soulter/hugging-chat-api to access reverse engineering huggingchat."
 
     def supported_models(self) -> list[str]:
-        return [
-            "gpt-3.5-turbo",
-            "gpt-4"
-        ]
+        # Возвращаем доступные модели
+        return self.chatbot.get_available_llm_models()
 
     def function_call_supported(self) -> bool:
         return False
@@ -40,7 +38,7 @@ class HuggingChatAdapter(llm.LLMLibAdapter):
 
     def multi_round_supported(self) -> bool:
         return True
-    
+
     @classmethod
     def config_comment(cls) -> str:
         return \
@@ -53,13 +51,13 @@ class HuggingChatAdapter(llm.LLMLibAdapter):
 
 Please refer to https://github.com/Soulter/hugging-chat-api
 """
-    
+
     @classmethod
     def supported_path(self) -> str:
         return "/v1/chat/completions"
-    
+
     _chatbot: hugchat.ChatBot = None
-    
+
     @property
     def chatbot(self) -> hugchat.ChatBot:
         if self._chatbot is None:
@@ -70,14 +68,14 @@ Please refer to https://github.com/Soulter/hugging-chat-api
             except:
                 cookie = sign.login()
                 sign.saveCookiesToDir("data/hugchatCookies")
-            
+
             self._chatbot = hugchat.ChatBot(cookies=cookie.get_dict())
         return self._chatbot
-    
+
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
-    
+
     async def test(self) -> typing.Union[bool, str]:
         try:
             self.chatbot.change_conversation(self.chatbot.new_conversation())
@@ -86,25 +84,35 @@ Please refer to https://github.com/Soulter/hugging-chat-api
                 stream=True
             ):
                 pass
-            
+
             self.chatbot.delete_conversation(self.chatbot.current_conversation)
-            
+
             return True, ""
         except Exception as e:
             traceback.print_exc()
             return False, str(e)
-    
+
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         prompt = ""
-        
+
         for msg in req.messages:
             prompt += f"{msg['role']}: {msg['content']}\n"
-        
+
         prompt += "assistant: "
-        
+
+        # Проверяем, указана ли модель в запросе
+        model = req.model if hasattr(req, 'model') and req.model in self.supported_models() else None
+
+        # Если модель указана, переключаемся на нее
+        if model:
+            available_models = self.chatbot.get_available_llm_models()
+            model_index = available_models.index(model) if model in available_models else None
+            if model_index is not None:
+                self.chatbot.switch_llm(model_index)
+
         random_int = random.randint(0, 1000000000)
         self.chatbot.change_conversation(self.chatbot.new_conversation())
-        
+
         for resp in self.chatbot.query(
             text=prompt,
             stream=True
