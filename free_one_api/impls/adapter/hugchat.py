@@ -82,11 +82,9 @@ Please refer to https://github.com/Soulter/hugging-chat-api
         try:
             conversation_id = self.chatbot.new_conversation()
             self.chatbot.change_conversation(conversation_id)
-            for data in self.chatbot.query(
-                "Hi, respond 'Hello, world!' please.",
-                stream=True
-            ):
-                pass
+            answer = ""
+            for data in self.chatbot.query("Hi, respond 'Hello, world!' please.", stream=True):
+                answer+=data["token"]
 
             return True, ""
         except Exception as e:
