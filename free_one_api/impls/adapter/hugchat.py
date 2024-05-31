@@ -101,14 +101,12 @@ Please refer to https://github.com/Soulter/hugging-chat-api
 
         prompt += "assistant: "
 
-        model = req.model if hasattr(req, 'model') and req.model in self.supported_models() else None
-
-        if model:
-            available_models = self.chatbot.get_remote_llms()
-            model_names = [model.name for model in available_models]
-            model_index = model_names.index(model) if model in model_names else None
-            if model_index is not None:
-                self.chatbot.switch_llm(model_index)
+        model = req.model
+        available_models = self.chatbot.get_remote_llms()
+        model_names = [m.name for m in available_models]
+        model_index = model_names.index(model) if model in model_names else None
+        if model_index is not None:
+            self.chatbot.switch_llm(model_index)
 
         random_int = random.randint(0, 1000000000)
         self.chatbot.change_conversation(self.chatbot.new_conversation())
