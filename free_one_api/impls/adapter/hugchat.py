@@ -27,7 +27,9 @@ class HuggingChatAdapter(llm.LLMLibAdapter):
         return "Use Huggingface/hugging-chat to access reverse engineering huggingchat."
 
     def supported_models(self) -> list[str]:
-        return self.chatbot.get_available_llm_models()
+        models = self.chatbot.get_remote_llms()
+        model_names = [model.name for model in models]
+        return model_names
 
     def function_call_supported(self) -> bool:
         return False
@@ -102,8 +104,9 @@ Please refer to https://github.com/Soulter/hugging-chat-api
         model = req.model if hasattr(req, 'model') and req.model in self.supported_models() else None
 
         if model:
-            available_models = self.chatbot.get_available_llm_models()
-            model_index = available_models.index(model) if model in available_models else None
+            available_models = self.chatbot.get_remote_llms()
+            model_names = [model.name for model in available_models]
+            model_index = model_names.index(model) if model in model_names else None
             if model_index is not None:
                 self.chatbot.switch_llm(model_index)
 
