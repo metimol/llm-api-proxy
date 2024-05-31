@@ -206,7 +206,7 @@ async def make_application(config_path: str) -> Application:
         "GPT": gpt.GPTAdapter,
         "NextChat": nextchat.NextChatAdapter,
         "ChatGPTWeb": chatgpt_web.ChatGPTWebAdapter,
-        "HugChat: hugchat.HuggingChatAdapter
+        "HugChat": hugchat.HuggingChatAdapter
     }
 
     for adapter_name in adapter_config_mapping:
