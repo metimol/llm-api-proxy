@@ -42,6 +42,29 @@ class WebAPIGroup(routergroup.APIGroup):
                 "message": "ok",
                 "data": chan_list_json,
             })
+
+        @self.api("/models", ["GET"], auth=False)
+        async def channel_models():
+            try:
+                chan_list = await self.chanmgr.list_channels()
+                unique_models = set()
+
+                for chan in chan_list:
+                    chan_obj = channel.Channel.dump_channel(chan)
+                    supported_models = chan_obj["adapter"]["supported_models"]
+                    unique_models.update(supported_models)
+
+                return jsonify({
+                    "code": 0,
+                    "message": "ok",
+                    "data": list(unique_models),
+                })
+            except Exception as e:
+                traceback.print_exc()
+                return jsonify({
+                    "code": 1,
+                    "message": str(e),
+                })
         
         @self.api("/channel/create", ["POST"], auth=True)
         async def channel_create():
