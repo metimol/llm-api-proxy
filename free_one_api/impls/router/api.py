@@ -51,7 +51,7 @@ class WebAPIGroup(routergroup.APIGroup):
 
                 for chan in chan_list:
                     chan_obj = channel.Channel.dump_channel(chan)
-                    supported_models = chan_obj["adapter"]["config"]
+                    supported_models = chan_obj["adapter"]["config"].get("models", None)
                     unique_models.update(supported_models)
 
                 return quart.jsonify({
