@@ -27,7 +27,6 @@ class HuggingChatAdapter(llm.LLMLibAdapter):
         return "Use Soulter/hugging-chat-api to access reverse engineering huggingchat."
 
     def supported_models(self) -> list[str]:
-        # Возвращаем доступные модели
         return self.chatbot.get_available_llm_models()
 
     def function_call_supported(self) -> bool:
@@ -100,10 +99,8 @@ Please refer to https://github.com/Soulter/hugging-chat-api
 
         prompt += "assistant: "
 
-        # Проверяем, указана ли модель в запросе
         model = req.model if hasattr(req, 'model') and req.model in self.supported_models() else None
 
-        # Если модель указана, переключаемся на нее
         if model:
             available_models = self.chatbot.get_available_llm_models()
             model_index = available_models.index(model) if model in available_models else None
