@@ -123,7 +123,7 @@ Please refer to https://github.com/Soulter/hugging-chat-api
                 yield response.Response(
                     id=random_int,
                     finish_reason=response.FinishReason.NULL,
-                    normal_message=resp['token'],
+                    normal_message=resp,
                     function_call=None
                 )
         except Exception as e:
