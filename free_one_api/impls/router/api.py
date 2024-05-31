@@ -54,14 +54,14 @@ class WebAPIGroup(routergroup.APIGroup):
                     supported_models = chan_obj["adapter"]["supported_models"]
                     unique_models.update(supported_models)
 
-                return jsonify({
+                return quart.jsonify({
                     "code": 0,
                     "message": "ok",
                     "data": list(unique_models),
                 })
             except Exception as e:
                 traceback.print_exc()
-                return jsonify({
+                return quart.jsonify({
                     "code": 1,
                     "message": str(e),
                 })
