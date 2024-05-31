@@ -205,7 +205,8 @@ async def make_application(config_path: str) -> Application:
         "Deepinfra": deepinfra.DeepinfraAdapter,
         "GPT": gpt.GPTAdapter,
         "NextChat": nextchat.NextChatAdapter,
-        "ChatGPTWeb": chatgpt_web.ChatGPTWebAdapter
+        "ChatGPTWeb": chatgpt_web.ChatGPTWebAdapter,
+        "HugChat: hugchat.HuggingChatAdapter
     }
 
     for adapter_name in adapter_config_mapping:
