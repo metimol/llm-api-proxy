@@ -78,20 +78,23 @@ Please refer to https://github.com/Soulter/hugging-chat-api
         self.eval = eval
 
     async def test(self) -> typing.Union[bool, str]:
+        conversation_id = None
         try:
-            self.chatbot.change_conversation(self.chatbot.new_conversation())
+            conversation_id = self.chatbot.new_conversation()
+            self.chatbot.change_conversation(conversation_id)
             for data in self.chatbot.query(
                 "Hi, respond 'Hello, world!' please.",
                 stream=True
             ):
                 pass
 
-            self.chatbot.delete_conversation(self.chatbot.current_conversation)
-
             return True, ""
         except Exception as e:
             traceback.print_exc()
             return False, str(e)
+        finally:
+            if conversation_id:
+                self.chatbot.delete_conversation(conversation_id)
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         prompt = ""
@@ -109,19 +112,30 @@ Please refer to https://github.com/Soulter/hugging-chat-api
             self.chatbot.switch_llm(model_index)
 
         random_int = random.randint(0, 1000000000)
-        self.chatbot.change_conversation(self.chatbot.new_conversation())
+        conversation_id = self.chatbot.new_conversation()
+        self.chatbot.change_conversation(conversation_id)
 
-        for resp in self.chatbot.query(
-            text=prompt,
-            stream=True
-        ):
+        try:
+            for resp in self.chatbot.query(
+                text=prompt,
+                stream=True
+            ):
+                yield response.Response(
+                    id=random_int,
+                    finish_reason=response.FinishReason.NULL,
+                    normal_message=resp['token'],
+                    function_call=None
+                )
+        except Exception as e:
+            traceback.print_exc()
             yield response.Response(
                 id=random_int,
-                finish_reason=response.FinishReason.NULL,
-                normal_message=resp['token'],
+                finish_reason=response.FinishReason.ERROR,
+                normal_message=str(e),
                 function_call=None
             )
-        self.chatbot.delete_conversation(self.chatbot.current_conversation)
+        finally:
+            self.chatbot.delete_conversation(conversation_id)
 
         yield response.Response(
             id=random_int,
