@@ -89,7 +89,7 @@ Please refer to https://github.com/Soulter/hugging-chat-api
             return True, ""
         except Exception as e:
             traceback.print_exc()
-            return False, str(e)
+            return False, f"Answer: {answer}. Error: {e}"
         finally:
             if conversation_id:
                 self.chatbot.delete_conversation(conversation_id)
