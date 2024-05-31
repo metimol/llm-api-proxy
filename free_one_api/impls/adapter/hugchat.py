@@ -20,11 +20,11 @@ class HuggingChatAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
-        return "Soulter/hugging-chat-api"
+        return "Huggingface/hugging-chat"
 
     @classmethod
     def description(self) -> str:
-        return "Use Soulter/hugging-chat-api to access reverse engineering huggingchat."
+        return "Use Huggingface/hugging-chat to access reverse engineering huggingchat."
 
     def supported_models(self) -> list[str]:
         return self.chatbot.get_available_llm_models()
