@@ -84,12 +84,14 @@ Please refer to https://github.com/Soulter/hugging-chat-api
             self.chatbot.change_conversation(conversation_id)
             answer = ""
             for data in self.chatbot.query("Hi, respond 'Hello, world!' please.", stream=True):
+                if data is None:
+                    continue
                 answer+=data["token"]
 
             return True, ""
         except Exception as e:
             traceback.print_exc()
-            return False, f"Answer: {answer}. Error: {e}"
+            return False, f"Huggingchat error: {e}"
         finally:
             if conversation_id:
                 self.chatbot.delete_conversation(conversation_id)
