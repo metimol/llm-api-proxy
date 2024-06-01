@@ -2,35 +2,33 @@ import abc
 import asyncio
 import time
 import enum
-import logging
-
 
 class Record:
-    
+
     start_time: float = 0.0
     """Start time of request."""
-    
+
     end_time: float = -1.0
     """End time of request."""
-    
+
     latency: float = -1.0
     """Latency of request."""
-    
+
     req_messages_length: int = 0
     """Request messages."""
-    
+
     resp_message_length: int = 0
     """Response message length."""
-    
+
     stream: bool = False
     """Whether the request is stream mode."""
-    
+
     success: bool = False
     """Whether the request is successful."""
-    
+
     error: Exception = None
     """Error of request."""
-    
+
     def __init__(
         self,
         start_time: float=0.0,
@@ -48,10 +46,9 @@ class Record:
         self.resp_message_length = resp_message_length
         self.success = success
         self.error = error
-        
+
     def commit(self):
         self.end_time = time.time()
-        logging.debug(f"Commit record {self}")
 
     def __str__(self) -> str:
         return f"""Record(start_time={self.start_time}, 
@@ -71,7 +68,7 @@ class AbsChannelEvaluation(metaclass=abc.ABCMeta):
     Takes performance or other index into account and give a score of channel.
     """
     records: list[Record]
-    
+
     def add_record(self, record: Record):
         """Add a record.
         
