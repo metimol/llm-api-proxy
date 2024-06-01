@@ -1,5 +1,4 @@
 import typing
-import traceback
 import uuid
 import random
 
@@ -90,7 +89,6 @@ Please refer to https://github.com/Soulter/hugging-chat-api
 
             return True, ""
         except Exception as e:
-            traceback.print_exc()
             return False, f"Huggingchat error: {e}"
         finally:
             if conversation_id:
@@ -129,7 +127,6 @@ Please refer to https://github.com/Soulter/hugging-chat-api
                     function_call=None
                 )
         except Exception as e:
-            traceback.print_exc()
             raise ValueError(f"Huggingchat error: {e}")
         finally:
             self.chatbot.delete_conversation(conversation_id)
