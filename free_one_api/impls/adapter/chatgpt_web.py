@@ -1,4 +1,4 @@
-import typing, traceback, uuid, random, requests, ujson, httpx, json
+import typing, uuid, random, requests, ujson, httpx, json
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -120,6 +120,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "max_tokens": 4000,
                 "user": str(uuid.uuid4())
             }
+            random_int = random.randint(0, 1000000000)
             async with client.stream("POST", f"{api_url}/api/chat-process", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
