@@ -1,4 +1,11 @@
-import typing, traceback, uuid, random, requests, ujson, httpx, json
+import typing
+import uuid
+import random
+
+import requests
+import ujson
+import httpx
+import json
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -91,7 +98,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
             return True, ""
         except Exception as e:
-            traceback.print_exc()
             return False, str(e)
 
     async def create_completion_data(self, chunk):
