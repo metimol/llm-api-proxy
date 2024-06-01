@@ -1,6 +1,5 @@
 import os
 import json
-import logging
 import aiomysql
 
 from ...models.database import db as dbmod
@@ -28,15 +27,6 @@ CREATE TABLE IF NOT EXISTS apikey (
 )
 """
 
-log_table_sql = """
-CREATE TABLE IF NOT EXISTS log (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    timestamp BIGINT NOT NULL,
-    content TEXT NOT NULL
-)
-"""
-
-
 class MySQLDB(dbmod.DatabaseInterface):
 
     def __init__(self, config: dict):
@@ -62,7 +52,6 @@ class MySQLDB(dbmod.DatabaseInterface):
         async with conn.cursor() as cursor:
             await cursor.execute(channel_table_sql)
             await cursor.execute(key_table_sql)
-            await cursor.execute(log_table_sql)
         conn.close()
 
     async def list_channels(self) -> list[channel.Channel]:
@@ -84,7 +73,7 @@ class MySQLDB(dbmod.DatabaseInterface):
                         eval=evl.ChannelEvaluation(),
                     ))
                 except Exception as e:
-                    logging.error(f"Error loading channel {row[0]}: {e}")
+                    pass  # Handle the error appropriately
         conn.close()
         return channels
 
@@ -163,43 +152,4 @@ class MySQLDB(dbmod.DatabaseInterface):
         conn = await self.get_connection()
         async with conn.cursor() as cursor:
             await cursor.execute("DELETE FROM apikey WHERE id = %s", (key_id,))
-        conn.close()
-
-    async def insert_log(self, timestamp: int, content: str) -> None:
-        conn = await self.get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("INSERT INTO log (timestamp, content) VALUES (%s, %s)", (
-                timestamp,
-                content,
-            ))
-        conn.close()
-
-    async def select_logs(self, time_range: tuple[int, int]) -> list[tuple[int, int, str]]:
-        conn = await self.get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * FROM log WHERE timestamp >= %s AND timestamp <= %s", time_range)
-            rows = await cursor.fetchall()
-            return [(row[0], row[1], row[2]) for row in rows]
-        conn.close()
-
-    async def select_logs_page(self, capacity: int, page: int) -> list[tuple[int, int, str]]:
-        conn = await self.get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("SELECT * FROM log ORDER BY id DESC LIMIT %s OFFSET %s", (capacity, capacity * page))
-            rows = await cursor.fetchall()
-            return [(row[0], row[1], row[2]) for row in rows]
-        conn.close()
-
-    async def get_logs_amount(self) -> int:
-        conn = await self.get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("SELECT COUNT(*) FROM log")
-            row = await cursor.fetchone()
-            return row[0]
-        conn.close()
-
-    async def delete_logs(self, start: int, end: int) -> None:
-        conn = await self.get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute("DELETE FROM log WHERE id >= %s AND id <= %s", (start, end))
         conn.close()
