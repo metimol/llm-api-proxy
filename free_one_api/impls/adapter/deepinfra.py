@@ -131,7 +131,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                             break
                         try:
                             chunk = await self.create_completion_data(line_content)
-                            print(chunk)
                             if chunk["choices"][0]["finish_reason"]=="stop":
                                 yield response.Response(
                                     id=random_int,
