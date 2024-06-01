@@ -1,5 +1,3 @@
-import traceback
-
 import quart
 
 from ...models.router import group as routergroup
@@ -63,7 +61,6 @@ class ForwardAPIGroup(routergroup.APIGroup):
                             ), e.status_code
                     except Exception as e:
                         if attempt == 9:
-                            traceback.print_exc()
                             return quart.jsonify(
                                 {
                                     "error": {
@@ -76,7 +73,6 @@ class ForwardAPIGroup(routergroup.APIGroup):
                             ), 500
 
             except Exception as e:
-                traceback.print_exc()
                 return quart.jsonify(
                     {
                         "error": {
