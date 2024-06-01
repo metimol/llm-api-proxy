@@ -1,4 +1,10 @@
-import typing, traceback, uuid, random, requests, ujson, httpx, json
+import typing
+import uuid
+import random
+import requests
+import ujson
+import httpx
+import json
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -134,7 +140,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                             break
                         try:
                             chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"][0]["finish_reason"]=="stop":
+                            if chunk["choices"][0]["finish_reason"] == "stop":
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
