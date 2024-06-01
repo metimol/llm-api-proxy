@@ -28,7 +28,7 @@ class Application:
     """Application instance."""
 
     dbmgr: db.DatabaseInterface
-    """Database manager."""""
+    """Database manager."""
 
     router: routermgr.RouterManager
     """Router manager."""
