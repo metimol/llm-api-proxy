@@ -41,8 +41,6 @@ class Application:
 
     watchdog: wdmgr.AbsWatchDog
 
-    logging_level: int = None
-
     def __init__(
         self,
         dbmgr: db.DatabaseInterface,
@@ -50,14 +48,12 @@ class Application:
         channel: chanmgr.AbsChannelManager,
         key: keymgr.AbsAPIKeyManager,
         watchdog: wdmgr.AbsWatchDog,
-        logging_level: int = None,
     ):
         self.dbmgr = dbmgr
         self.router = router
         self.channel = channel
         self.key = key
         self.watchdog = watchdog
-        self.logging_level = logging_level
 
     async def run(self):
         """Run application."""
@@ -92,9 +88,6 @@ default_config = {
     "web": {
         "frontend_path": "./web/dist/",
     },
-    "logging": {
-        "debug": False,
-    },
     "random_ad": {
         "enabled": False,
         "rate": 0.05,
@@ -128,14 +121,6 @@ async def make_application(config_path: str) -> Application:
     # dump config
     with open(config_path, "w") as f:
         yaml.dump(config, f)
-
-    logging_level = None
-
-    if 'logging' in config and 'debug' in config['logging'] and config['logging']['debug']:
-        logging_level = "DEBUG"
-
-    if 'DEBUG' in os.environ and os.environ['DEBUG'] == 'true':
-        logging_level = "DEBUG"
 
     # save ad to runtime
     if 'random_ad' in config and config['random_ad']['enabled']:
@@ -172,7 +157,7 @@ async def make_application(config_path: str) -> Application:
     }
 
     for adapter_name in adapter_config_mapping:
-        if (adapter_name not in config['adapters']):
+        if adapter_name not in config['adapters']:
             config['adapters'][adapter_name] = {}
 
         for k, v in config["adapters"][adapter_name].items():
@@ -243,7 +228,6 @@ async def make_application(config_path: str) -> Application:
         channel=channelmgr,
         key=apikeymgr,
         watchdog=wdmgr,
-        logging_level=logging_level,
     )
 
     return app
