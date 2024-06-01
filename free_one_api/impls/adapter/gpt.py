@@ -1,4 +1,4 @@
-import typing, traceback, uuid, random, requests, ujson, httpx, json
+import typing, uuid, random, requests, ujson, httpx, json
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -73,7 +73,6 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
 
             return True, ""
         except Exception as e:
-            traceback.print_exc()
             return False, str(e)
 
     async def create_completion_data(self, chunk):
