@@ -1,7 +1,5 @@
 import typing
-import traceback
 import uuid
-import logging
 import random
 
 import pkg_resources
@@ -39,11 +37,11 @@ from ...models.channel import evaluation
 
 @adapter.llm_adapter
 class GPT4FreeAdapter(llm.LLMLibAdapter):
-    
+
     @classmethod
     def name(cls) -> str:
         return "xtekky/gpt4free"
-    
+
     @classmethod
     def description(self) -> str:
         return "Use xtekky/gpt4free to access lots of GPT providers."
@@ -61,7 +59,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
 
     def multi_round_supported(self) -> bool:
         return True
-    
+
     @classmethod
     def config_comment(cls) -> str:
         return \
@@ -71,21 +69,21 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
     @classmethod
     def supported_path(cls) -> str:
         return "/v1/chat/completions"
-    
+
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
-        
+
     _use_provider: g4f.Provider = None
     _use_stream_provider: g4f.Provider = None
-    
+
     async def use_provider(self, stream: bool) -> g4f.Provider.BaseProvider:
         if self._use_provider is None:
             await self._select_provider()
         if stream and self._use_stream_provider is not None:
             return self._use_stream_provider
         return self._use_provider
-    
+
     async def _select_provider(self):
         non_stream_tested = False
         if self._use_provider is not None:
@@ -103,7 +101,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
 
                 if 'Rock' in resp and '<' not in resp:
                     non_stream_tested = True
-            except Exception as e:
+            except Exception:
                 self._use_provider = None
         if non_stream_tested and self._use_stream_provider is not None:
             try:
@@ -118,9 +116,9 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
                 )
                 async for _ in resp:
                     return
-            except Exception as e:
+            except Exception:
                 self._use_stream_provider = None
-        
+
         self._use_provider = None
         self._use_stream_provider = None
 
@@ -136,14 +134,11 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
 
         for provider in providers:
 
-            # print("Testing provider", provider)
-            # logging.info("Testing provider %s", provider)
-
             if provider in exclude:
                 continue
 
             provider = getattr(g4f.Provider, provider)
-            
+
             try:
                 assert hasattr(provider, 'supports_stream')
                 resp = await g4f.ChatCompletion.create_async(
@@ -157,12 +152,10 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
                     provider=provider
                 )
 
-                logging.debug("Testing provider %s, resp %s", provider, resp)
-
                 if 'Rock' in resp and '<' not in resp:
                     if self._use_provider is None:
                         self._use_provider = provider
-                    
+
                     if provider.supports_stream:
                         try:
                             assert hasattr(provider, 'create_async_generator')
@@ -180,18 +173,14 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
                                 pass
                             if self._use_stream_provider is None:
                                 self._use_stream_provider = provider
-                        except Exception as e:
-                            traceback.print_exc()
-                            print("provider", provider, "does not really support stream mode")
-                        
-                    
+                        except Exception:
+                            pass
+
                     if self._use_provider is not None and self._use_stream_provider is not None:
-                        print("selected provider", self._use_provider, self._use_stream_provider)
                         break
-            except Exception as e:
-                # traceback.print_exc()
+            except Exception:
                 continue
-            
+
         if self._use_provider is None:
             raise exceptions.QueryHandlingError(404, "no_provider_found", "No provider available.")
 
@@ -208,12 +197,11 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
             )
             return True, ""
         except Exception as e:
-            traceback.print_exc()
             return False, str(e)
-        
+
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         provider = await self.use_provider(stream=True)
-        
+
         if not req.stream:
             resp = await g4f.ChatCompletion.create_async(
                 model=req.model,
@@ -227,7 +215,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
                 messages=req.messages,
                 timeout=180
             )
-        
+
         if isinstance(resp, typing.Generator):
             for resp_text in resp:
                 random_int = random.randint(0, 1000000000)
@@ -245,9 +233,7 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
             )
         elif isinstance(resp, typing.AsyncGenerator):
             async for resp_text in resp:
-            
                 random_int = random.randint(0, 1000000000)
-                
                 yield response.Response(
                     id=random_int,
                     finish_reason=response.FinishReason.NULL,
@@ -262,7 +248,6 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
             )
         else:
             random_int = random.randint(0, 1000000000)
-            
             yield response.Response(
                 id=random_int,
                 finish_reason=response.FinishReason.STOP,
