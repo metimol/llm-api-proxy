@@ -50,7 +50,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "llava-hf/llava-1.5-7b-hf",
             "databricks/dbrx-instruct",
             "microsoft/WizardLM-2-8x22B",
-            "microsoft/WizardLM-2-7B"
+            "microsoft/WizardLM-2-7B",
+            "mistralai/Mistral-7B-Instruct-v0.3"
         ]
 
     def function_call_supported(self) -> bool:
