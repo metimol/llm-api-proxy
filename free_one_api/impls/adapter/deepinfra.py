@@ -26,34 +26,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         return "Use Deepinfra/Deepinfra-API to access official deepinfra API."
 
     def supported_models(self) -> list[str]:
-        return [
-            "bigcode/starcoder2-15b",
-            "openchat/openchat_3.5",
-            "lizpreciatior/lzlv_70b_fp16_hf",
-            "codellama/CodeLlama-34b-Instruct-hf",
-            "DeepInfra/pygmalion-13b-4bit-128g",
-            "deepinfra/airoboros-70b",
-            "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "mistralai/Mixtral-8x22B-Instruct-v0.1",
-            "HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1",
-            "mistralai/Mistral-7B-Instruct-v0.1",
-            "mistralai/Mistral-7B-Instruct-v0.2",
-            "cognitivecomputations/dolphin-2.6-mixtral-8x7b",
-            "meta-llama/Llama-2-7b-chat-hf",
-            "codellama/CodeLlama-70b-Instruct-hf",
-            "meta-llama/Llama-2-70b-chat-hf",
-            "meta-llama/Llama-2-13b-chat-hf",
-            "meta-llama/Meta-Llama-3-70B-Instruct",
-            "meta-llama/Meta-Llama-3-8B-Instruct",
-            "google/gemma-7b-it",
-            "google/gemma-1.1-7b-it",
-            "llava-hf/llava-1.5-7b-hf",
-            "databricks/dbrx-instruct",
-            "microsoft/WizardLM-2-8x22B",
-            "microsoft/WizardLM-2-7B",
-            "mistralai/Mistral-7B-Instruct-v0.3",
-            "openchat/openchat-3.6-8b"
-        ]
+        return ["mistralai/Mistral-7B-Instruct-v0.3", "Phind/Phind-CodeLlama-34B-v2", "mistralai/Mixtral-8x22B-v0.1", "meta-llama/Llama-2-13b-chat-hf", "meta-llama/Meta-Llama-3-70B-Instruct", "databricks/dbrx-instruct", "meta-llama/Meta-Llama-3-8B-Instruct", "Austism/chronos-hermes-13b-v2", "openchat/openchat-3.6-8b", "llava-hf/llava-1.5-7b-hf", "cognitivecomputations/dolphin-2.6-mixtral-8x7b", "bigcode/starcoder2-15b-instruct-v0.1", "codellama/CodeLlama-70b-Instruct-hf", "HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1", "lizpreciatior/lzlv_70b_fp16_hf", "google/codegemma-7b-it", "Gryphe/MythoMax-L2-13b", "bigcode/starcoder2-15b", "meta-llama/Llama-2-7b-chat-hf", "google/gemma-1.1-7b-it", "mistralai/Mixtral-8x22B-Instruct-v0.1", "microsoft/WizardLM-2-7B", "mistralai/Mistral-7B-Instruct-v0.2", "01-ai/Yi-34B-Chat", "openchat/openchat_3.5", "Gryphe/MythoMax-L2-13b-turbo", "microsoft/WizardLM-2-8x22B", "mistralai/Mixtral-8x7B-Instruct-v0.1", "mistralai/Mistral-7B-Instruct-v0.1", "meta-llama/Llama-2-70b-chat-hf", "deepinfra/airoboros-70b", "codellama/CodeLlama-34b-Instruct-hf"]
 
     def function_call_supported(self) -> bool:
         return False
