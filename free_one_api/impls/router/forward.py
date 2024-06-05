@@ -29,60 +29,37 @@ class ForwardAPIGroup(routergroup.APIGroup):
 
         @self.api("/v1/chat/completions", ["POST"], auth=True)
         async def chat_completion():
-            try:
-                raw_data = await quart.request.get_json()
+            for attempt in range(10):
+                try:
+                    raw_data = await quart.request.get_json()
 
-                req = request.Request(
-                    raw_data["model"],
-                    raw_data["messages"],
-                    raw_data.get("functions"),
-                    raw_data.get("stream", False),
-                )
+                    req = request.Request(
+                        raw_data["model"],
+                        raw_data["messages"],
+                        raw_data.get("functions"),
+                        raw_data.get("stream", False),
+                    )
 
-                for attempt in range(10):
-                    try:
-                        result = await self.fwdmgr.query(
-                            "/v1/chat/completions",
-                            req,
-                            raw_data,
-                        )
-                        return result
-                    except exceptions.QueryHandlingError as e:
-                        if attempt == 9:
-                            return quart.jsonify(
-                                {
-                                    "error": {
-                                        "message": e.message,
-                                        "type": e.type,
-                                        "param": e.param,
-                                        "code": e.code
-                                    }
+                
+                    result = await self.fwdmgr.query(
+                        "/v1/chat/completions",
+                        req,
+                        raw_data,
+                    )
+                    return result
+
+                except Exception as e:
+                    if attempt == 9:
+                        return quart.jsonify(
+                            {
+                                "error": {
+                                    "message": "Error occurred while handling your request: {}. You can retry or contact your admin.".format(str(e)),
+                                    "type": "requests",
+                                    "param": None,
+                                    "code": None
                                 }
-                            ), e.status_code
-                    except Exception as e:
-                        if attempt == 9:
-                            return quart.jsonify(
-                                {
-                                    "error": {
-                                        "message": "Error occurred while handling your request: {}. You can retry or contact your admin.".format(str(e)),
-                                        "type": "requests",
-                                        "param": None,
-                                        "code": None
-                                    }
-                                }
-                            ), 500
-
-            except Exception as e:
-                return quart.jsonify(
-                    {
-                        "error": {
-                            "message": "Error occurred while handling your request: {}. You can retry or contact your admin.".format(str(e)),
-                            "type": "requests",
-                            "param": None,
-                            "code": None
-                        }
-                    }
-                ), 500
+                            }
+                        ), 500
 
     def get_tokens(self) -> list[str]:
         key_obj_list: apikey.FreeOneAPIKey = self.keymgr.get_key_list()
