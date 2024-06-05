@@ -99,7 +99,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as model_response:
                 model_response.raise_for_status()
                 async for line in model_response.aiter_lines():
-                    print(line)
                     if line:
                         line_content = line[6:]
                         if line_content == "[DONE]":
