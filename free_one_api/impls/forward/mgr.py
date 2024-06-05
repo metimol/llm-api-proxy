@@ -36,10 +36,9 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         record.req_messages_length = req_msg_total_length
 
         t = int(time.time())
-        generated_content = ""
 
         async def _gen():
-            nonlocal generated_content
+            generated_content = ""
             try:
                 async for resp in chan.adapter.query(req):
                     if record.latency < 0:
