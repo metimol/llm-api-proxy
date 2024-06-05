@@ -77,15 +77,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 record.success = True
 
                 yield "data: [DONE]\n\n"
-            except exceptions.QueryHandlingError as e:
-
-                record.error = e
-                record.success = False
-
-                raise ValueError("Internal server error") from e
             except Exception as e:
                 record.error = e
                 record.success = False
+                raise ValueError("Internal server error") from e
             finally:
                 record.commit()
                 if generated_content=="":
@@ -171,8 +166,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         finally:
             record.commit()
 
-        # Проверка на пустой сгенерированный текст
-        if not normal_message.strip():
+        if normal_message=="":
             raise ValueError("Generated text is empty")
 
         spent_ms = int((time.time() - before)*1000)
