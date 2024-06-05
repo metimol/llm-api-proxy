@@ -53,7 +53,7 @@ class ForwardAPIGroup(routergroup.APIGroup):
                         return quart.jsonify(
                             {
                                 "error": {
-                                    "message": "Error occurred while handling your request: {}. You can retry or contact your admin.".format(str(e)),
+                                    "message": "Error occurred while handling your request. You can retry or contact your admin.",
                                     "type": "requests",
                                     "param": None,
                                     "code": None
