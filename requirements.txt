@@ -11,5 +11,5 @@ g4f
 revTongYi
 colorlog
 ujson
-fastapi
+hypercorn
 git+https://github.com/Zai-Kun/reverse-engineered-chatgpt
