@@ -44,6 +44,9 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         record.req_messages_length = req_msg_total_length
 
         t = int(time.time())
+
+        generated_content = []
+
         async def _gen():
             try:
                 async for resp in chan.adapter.query(req):
@@ -55,6 +58,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                         continue
 
                     record.resp_message_length += len(resp.normal_message)
+                    generated_content.append(resp.normal_message)
 
                     yield "data: {}\n\n".format(json.dumps({
                         "id": "chatcmpl-"+resp_id,
@@ -72,6 +76,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
                 if randomad.enabled:
                     for word in randomad.generate_ad():
+                        generated_content.append(word)
                         yield "data: {}\n\n".format(json.dumps({
                             "id": "chatcmpl-"+resp_id,
                             "object": "chat.completion.chunk",
@@ -103,6 +108,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 pass  # Handle the error appropriately
             finally:
                 record.commit()
+
+        # Проверка на пустой сгенерированный текст
+        if not any(generated_content):
+            raise ValueError("Generated text is empty")
 
         spent_ms = int((time.time() - before)*1000)
 
@@ -183,6 +192,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             raise ValueError("Internal server error") from e
         finally:
             record.commit()
+
+        # Проверка на пустой сгенерированный текст
+        if not normal_message.strip():
+            raise ValueError("Generated text is empty")
 
         spent_ms = int((time.time() - before)*1000)
 
