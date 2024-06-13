@@ -91,12 +91,13 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 async for line in model_response.aiter_lines():
                     if line:
                         line = ujson.loads(line)
-                        if "detail" not in line:
-                            raise RuntimeError(f"Response: {{line}}")
-                        if content := line["detail"]["choices"][0]["delta"].get("content"):
-                            answer+=content
+                        if line.get("type") == "content":
+                            answer+=line.get("content", "")
 
-            return True, ""
+            if content=="":
+                return False, "Gpt4free test failed."
+            else:
+                return True, ""
         except:
             return False, "Gpt4free test failed."
 
