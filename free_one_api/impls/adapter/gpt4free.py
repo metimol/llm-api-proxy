@@ -1,10 +1,8 @@
 import typing
 import uuid
 import random
-import requests
-import ujson
 import httpx
-import json
+import ujson
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -12,9 +10,8 @@ from ...entities import request
 from ...entities import response, exceptions
 from ...models.channel import evaluation
 
-
 @adapter.llm_adapter
-class NextChatAdapter(llm.LLMLibAdapter):
+class Gpt4FreeAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
@@ -65,8 +62,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
             unique_id = uuid.uuid4()
             data = {
-                "id": str(random.randint(1111111, 99999999999999999999")),
-                "conversation_id": unique_id,
+                "id": str(random.randint(1111111, 99999999999999999999)),
+                "conversation_id": str(unique_id),
                 "model": model,
                 "web_search": False,
                 "provider": "",
@@ -86,19 +83,21 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'content-type': 'application/json'
             }
             answer = ""
-            async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
-                model_response.raise_for_status()
-                async for line in model_response.aiter_lines():
-                    if line:
-                        line = ujson.loads(line)
-                        if line.get("type") == "content":
-                            answer+=line.get("content", "")
 
-            if content=="":
+            async with httpx.AsyncClient() as client:
+                async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
+                    model_response.raise_for_status()
+                    async for line in model_response.aiter_lines():
+                        if line:
+                            line_data = ujson.loads(line)
+                            if line_data.get("type") == "content":
+                                answer += line_data.get("content", "")
+
+            if answer == "":
                 return False, "Gpt4free test failed."
             else:
                 return True, ""
-        except:
+        except Exception as e:
             return False, "Gpt4free test failed."
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
