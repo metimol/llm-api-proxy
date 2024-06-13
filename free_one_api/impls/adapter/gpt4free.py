@@ -103,6 +103,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         messages = req.messages
         model = req.model
+        random_int = random.randint(0, 1000000000)
+        unique_id = str(uuid.uuid4())
         api_url = self.config["url"]
 
         async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
@@ -113,19 +115,20 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'Origin': api_url,
                 'Pragma': 'no-cache',
                 'Referer': f'{api_url}/chat/{unique_id}',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, как Gecko) Chrome/126.0.0.0 Safari/537.36',
                 'accept': 'text/event-stream',
                 'content-type': 'application/json'
             }
             data = {
                 "id": str(random.randint(1111111, 99999999999999999999)),
-                "conversation_id": str(uuid.uuid4()),
+                "conversation_id": unique_id,
                 "model": model,
                 "web_search": False,
                 "provider": "",
                 "messages": messages,
                 "auto_continue": True,
-                "api_key": None
+                "api_key": None,
+                "stream": True
             }
             try:
                 async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
@@ -133,8 +136,8 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                     async for line in model_response.aiter_lines():
                         if line:
                             line_data = ujson.loads(line)
-                            if chunk.get("type") == "content":
-                                text = chunk.get("content", "")
+                            if line_data.get("type") == "content":
+                                text = line_data.get("content", "")
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
@@ -148,4 +151,4 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                         function_call=None
                     )
             except ValueError as e:
-                raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
+                raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
