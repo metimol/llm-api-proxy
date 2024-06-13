@@ -1,61 +1,38 @@
 import typing
 import uuid
 import random
-
-import pkg_resources
-
-using_g4f_version = pkg_resources.get_distribution("g4f").version
-
-class FakeResponse:
-
-    def json(self):
-        return {
-            "info": {
-                "version": using_g4f_version
-            }
-        }
-
-def repl(*args, **kwargs):
-    return FakeResponse()
-
 import requests
-
-old_get = requests.get
-requests.get = repl
-
-import g4f
-
-requests.get = old_get
-
-from free_one_api.entities import request, response
+import ujson
+import httpx
+import json
 
 from ...models import adapter
 from ...models.adapter import llm
-from ...entities import request, response, exceptions
+from ...entities import request
+from ...entities import response, exceptions
 from ...models.channel import evaluation
 
 
 @adapter.llm_adapter
-class GPT4FreeAdapter(llm.LLMLibAdapter):
+class NextChatAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
         return "xtekky/gpt4free"
 
     @classmethod
-    def description(self) -> str:
-        return "Use xtekky/gpt4free to access lots of GPT providers."
+    def description(cls) -> str:
+        return "Use Gpt4free UI with openai format."
 
     def supported_models(self) -> list[str]:
-        return [
-            "gpt-3.5-turbo"
-        ]
+        models_string = self.config.get("models", "gpt-3.5-turbo")
+        return models_string.split(",")
 
     def function_call_supported(self) -> bool:
         return False
 
     def stream_mode_supported(self) -> bool:
-        return True
+        return True    
 
     def multi_round_supported(self) -> bool:
         return True
@@ -63,7 +40,14 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
     @classmethod
     def config_comment(cls) -> str:
         return \
-"""You don't need to provide any authentification.
+"""Please provide necessary parameters:
+
+{
+    "url": "your_chat_url",
+    "models": "Optional. Default is 'gpt-3.5-turbo'.
+It should be a list of available models in this API, separated by commas without spaces. 
+For example: 'gpt4,gpt-4-o,gpt-4-turbo'
+}
 """
 
     @classmethod
@@ -74,183 +58,102 @@ class GPT4FreeAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
 
-    _use_provider: g4f.Provider = None
-    _use_stream_provider: g4f.Provider = None
-
-    async def use_provider(self, stream: bool) -> g4f.Provider.BaseProvider:
-        if self._use_provider is None:
-            await self._select_provider()
-        if stream and self._use_stream_provider is not None:
-            return self._use_stream_provider
-        return self._use_provider
-
-    async def _select_provider(self):
-        non_stream_tested = False
-        if self._use_provider is not None:
-            try:
-                resp = await g4f.ChatCompletion.create_async(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": "Hi, My name is Rock."
-                        }
-                    ],
-                    provider=self._use_provider
-                )
-
-                if 'Rock' in resp and '<' not in resp:
-                    non_stream_tested = True
-            except Exception:
-                self._use_provider = None
-        if non_stream_tested and self._use_stream_provider is not None:
-            try:
-                resp = self._use_stream_provider.create_async_generator(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": "Hi, My name is Rock."
-                        }
-                    ]
-                )
-                async for _ in resp:
-                    return
-            except Exception:
-                self._use_stream_provider = None
-
-        self._use_provider = None
-        self._use_stream_provider = None
-
-        from g4f.Provider import __all__ as providers
-
-        exclude = [
-            'Acytoo',
-            'BaseProvider',
-            'Bing',
-            'ChatBase',
-            'ChatgptDemo',
-        ]
-
-        for provider in providers:
-
-            if provider in exclude:
-                continue
-
-            provider = getattr(g4f.Provider, provider)
-
-            try:
-                assert hasattr(provider, 'supports_stream')
-                resp = await g4f.ChatCompletion.create_async(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": "Hi, My name is Rock."
-                        }
-                    ],
-                    provider=provider
-                )
-
-                if 'Rock' in resp and '<' not in resp:
-                    if self._use_provider is None:
-                        self._use_provider = provider
-
-                    if provider.supports_stream:
-                        try:
-                            assert hasattr(provider, 'create_async_generator')
-                            resp = provider.create_async_generator(
-                                model="gpt-3.5-turbo",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": "Hi, My name is Rock."
-                                    }
-                                ],
-                                timeout=120
-                            )
-                            async for _ in resp:
-                                pass
-                            if self._use_stream_provider is None:
-                                self._use_stream_provider = provider
-                        except Exception:
-                            pass
-
-                    if self._use_provider is not None and self._use_stream_provider is not None:
-                        break
-            except Exception:
-                continue
-
-        if self._use_provider is None:
-            raise exceptions.QueryHandlingError(404, "no_provider_found", "No provider available.")
-
     async def test(self) -> typing.Union[bool, str]:
         try:
-            await self._select_provider()
-            resp = await g4f.ChatCompletion.create_async(
-                model="gpt-3.5-turbo",
-                messages=[{
-                    "role": "user",
-                    "content": "Hello, please reply 'hi' only."
-                }],
-                provider=await self.use_provider(stream=False)
-            )
+            api_url = self.config["url"]
+            models = self.supported_models()
+            model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
+            data = {
+                "model": model,
+                "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
+                "stream": False
+            }
+            headers = {
+                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
+                "Accept": "text/event-stream",
+                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "Referer": api_url,
+                "x-requested-with": "XMLHttpRequest",
+                "Origin": api_url,
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "Connection": "keep-alive",
+                "Alt-Used": api_url,
+            }
+            async with httpx.AsyncClient(verify=False) as client:
+                response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None, follow_redirects=True)
+                response_data = response.json()
+                response_content = response_data["choices"][0]["message"]["content"]
+
             return True, ""
-        except Exception as e:
-            return False, str(e)
+        except:
+            return False, "NextChat test failed."
 
-    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
-        provider = await self.use_provider(stream=True)
+    async def create_completion_data(self, chunk):
+        try:
+            return ujson.loads(chunk)
+        except ValueError as e:
+            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
 
-        if not req.stream:
-            resp = await g4f.ChatCompletion.create_async(
-                model=req.model,
-                messages=req.messages,
-                provider=provider,
-                timeout=180
-            )
-        else:
-            resp = provider.create_async_generator(
-                model=req.model,
-                messages=req.messages,
-                timeout=180
-            )
+    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
+        messages = req.messages
+        model = req.model
+        random_int = random.randint(0, 1000000000)
+        api_url = self.config["url"]
 
-        if isinstance(resp, typing.Generator):
-            for resp_text in resp:
-                random_int = random.randint(0, 1000000000)
-                yield response.Response(
-                    id=random_int,
-                    finish_reason=response.FinishReason.NULL,
-                    normal_message=resp_text,
-                    function_call=None
-                )
-            yield response.Response(
-                id=random_int,
-                finish_reason=response.FinishReason.STOP,
-                normal_message="",
-                function_call=None
-            )
-        elif isinstance(resp, typing.AsyncGenerator):
-            async for resp_text in resp:
-                random_int = random.randint(0, 1000000000)
-                yield response.Response(
-                    id=random_int,
-                    finish_reason=response.FinishReason.NULL,
-                    normal_message=resp_text,
-                    function_call=None
-                )
-            yield response.Response(
-                id=random_int,
-                finish_reason=response.FinishReason.STOP,
-                normal_message="",
-                function_call=None
-            )
-        else:
-            random_int = random.randint(0, 1000000000)
-            yield response.Response(
-                id=random_int,
-                finish_reason=response.FinishReason.STOP,
-                normal_message=resp,
-                function_call=None
-            )
+        async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
+                "Accept": "text/event-stream",
+                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Content-Type": "application/json",
+                "Referer": api_url,
+                "x-requested-with": "XMLHttpRequest",
+                "Origin": api_url,
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "Connection": "keep-alive",
+                "Alt-Used": api_url,
+            }
+            data = {
+                "model": model,
+                "messages": messages,
+                "stream": True
+            }
+            async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
+                model_response.raise_for_status()
+                async for line in model_response.aiter_lines():
+                    if line:
+                        line_content = line[6:]
+                        if line_content == "[DONE]":
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.STOP,
+                                normal_message="",
+                                function_call=None
+                            )
+                            break
+                        try:
+                            chunk = await self.create_completion_data(line_content)
+                            if chunk["choices"][0]["finish_reason"] == "stop":
+                                yield response.Response(
+                                    id=random_int,
+                                    finish_reason=response.FinishReason.NULL,
+                                    normal_message=text,
+                                    function_call=None
+                                )
+                            else:
+                                text = chunk["choices"][0]["delta"]["content"]
+                                yield response.Response(
+                                    id=random_int,
+                                    finish_reason=response.FinishReason.NULL,
+                                    normal_message=text,
+                                    function_call=None
+                                )
+                        except ValueError as e:
+                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
