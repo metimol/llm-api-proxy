@@ -63,40 +63,36 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             api_url = self.config["url"]
             models = self.supported_models()
             model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
+            unique_id = uuid.uuid4()
             data = {
+                "id": str(random.randint(1111111, 99999999999999999999")),
+                "conversation_id": unique_id,
                 "model": model,
+                "web_search": False,
+                "provider": "",
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
-                "stream": False
+                "auto_continue": True,
+                "api_key": None
             }
             headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
+                'Accept-Language': 'ru-RU',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Origin': api_url,
+                'Pragma': 'no-cache',
+                'Referer': f'{api_url}/chat/{unique_id}',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                'accept': 'text/event-stream',
+                'content-type': 'application/json'
             }
             async with httpx.AsyncClient(verify=False) as client:
-                response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None, follow_redirects=True)
+                response = await client.post(f"{api_url}/backend-api/v2/conversation", json=data, headers=headers, timeout=None, follow_redirects=True)
                 response_data = response.json()
                 response_content = response_data["choices"][0]["message"]["content"]
 
             return True, ""
         except:
-            return False, "NextChat test failed."
-
-    async def create_completion_data(self, chunk):
-        try:
-            return ujson.loads(chunk)
-        except ValueError as e:
-            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
+            return False, "Gpt4free test failed."
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
