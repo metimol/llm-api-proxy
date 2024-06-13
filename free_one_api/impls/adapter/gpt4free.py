@@ -11,7 +11,7 @@ from ...entities import response, exceptions
 from ...models.channel import evaluation
 
 @adapter.llm_adapter
-class Gpt4FreeAdapter(llm.LLMLibAdapter):
+class GPT4FreeAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def name(cls) -> str:
