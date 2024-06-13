@@ -115,7 +115,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'Origin': api_url,
                 'Pragma': 'no-cache',
                 'Referer': f'{api_url}/chat/{unique_id}',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, как Gecko) Chrome/126.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
                 'accept': 'text/event-stream',
                 'content-type': 'application/json'
             }
