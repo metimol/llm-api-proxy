@@ -84,7 +84,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
             }
             answer = ""
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
                 async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
                     model_response.raise_for_status()
                     async for line in model_response.aiter_lines():
@@ -100,62 +100,46 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         except Exception as e:
             return False, "Gpt4free test failed."
 
-    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
+    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         messages = req.messages
         model = req.model
-        random_int = random.randint(0, 1000000000)
         api_url = self.config["url"]
 
         async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
             headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
+                'Accept-Language': 'ru-RU',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Origin': api_url,
+                'Pragma': 'no-cache',
+                'Referer': f'{api_url}/chat/{unique_id}',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+                'accept': 'text/event-stream',
+                'content-type': 'application/json'
             }
             data = {
+                "id": str(random.randint(1111111, 99999999999999999999)),
+                "conversation_id": str(uuid.uuid4()),
                 "model": model,
+                "web_search": False,
+                "provider": "",
                 "messages": messages,
-                "stream": True
+                "auto_continue": True,
+                "api_key": None
             }
-            async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
-                model_response.raise_for_status()
-                async for line in model_response.aiter_lines():
-                    if line:
-                        line_content = line[6:]
-                        if line_content == "[DONE]":
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.STOP,
-                                normal_message="",
-                                function_call=None
-                            )
-                            break
-                        try:
-                            chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"][0]["finish_reason"] == "stop":
+            try:
+                async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
+                    model_response.raise_for_status()
+                    async for line in model_response.aiter_lines():
+                        if line:
+                            line_data = ujson.loads(line)
+                            if chunk.get("type") == "content":
+                                text = chunk.get("content", "")
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
                                     normal_message=text,
                                     function_call=None
                                 )
-                            else:
-                                text = chunk["choices"][0]["delta"]["content"]
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                        except ValueError as e:
-                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
+            except ValueError as e:
+                raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
