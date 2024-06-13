@@ -85,10 +85,16 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 'accept': 'text/event-stream',
                 'content-type': 'application/json'
             }
-            async with httpx.AsyncClient(verify=False) as client:
-                response = await client.post(f"{api_url}/backend-api/v2/conversation", json=data, headers=headers, timeout=None, follow_redirects=True)
-                response_data = response.json()
-                response_content = response_data["choices"][0]["message"]["content"]
+            answer = ""
+            async with client.stream("POST", f"{api_url}/backend-api/v2/conversation", json=data, headers=headers) as model_response:
+                model_response.raise_for_status()
+                async for line in model_response.aiter_lines():
+                    if line:
+                        line = ujson.loads(line)
+                        if "detail" not in line:
+                            raise RuntimeError(f"Response: {{line}}")
+                        if content := line["detail"]["choices"][0]["delta"].get("content"):
+                            answer+=content
 
             return True, ""
         except:
