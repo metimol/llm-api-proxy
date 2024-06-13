@@ -141,5 +141,11 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                                     normal_message=text,
                                     function_call=None
                                 )
+                    yield response.Response(
+                        id=random_int,
+                        finish_reason=response.FinishReason.STOP,
+                        normal_message="",
+                        function_call=None
+                    )
             except ValueError as e:
                 raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
