@@ -35,7 +35,7 @@ onresize = () => {
     <div id="content_container" :style="{ width: contentContainerWidth }">
         <div id="content">
             <div id="content_header">
-                <h1>free-one-api</h1>
+                <h1>llm-api</h1>
                 <span v-if="version_str!=''" id="version_label">{{ version_str }}</span>
             </div>
             <div id="content_body">
