@@ -231,6 +231,12 @@ function disableChannel(channel_id) {
         })
 }
 
+// Функция для удаления отключенных каналов
+function deleteDisabledChannels() {
+    const disabledChannels = channelList.value.filter(channel => !channel.enabled);
+    disabledChannels.forEach(channel => deleteChannelConfirmed(channel.id));
+}
+
 // channel details/creation dialog
 const detailsDialogVisible = ref(false);
 const showingChannelIndex = ref(-1); // -1 when creating a new channel
@@ -370,11 +376,6 @@ function validateChannel() {
 }
 
 function applyChannelDetails() {
-    // channelList.value[showingChannelIndex.value].name = showingChannelData.details.name;
-    // channelList.value[showingChannelIndex.value].adapter = showingChannelData.details.adapter.type;
-    // channelList.value[showingChannelIndex.value].model_mapping = showingChannelData.details.model_mapping;
-    // channelList.value[showingChannelIndex.value].enabled = showingChannelData.details.enabled;
-    // channelList.value[showingChannelIndex.value].latency = showingChannelData.details.latency;
     console.log(showingChannelData);
 
     if (!validateChannel()) {
@@ -393,7 +394,6 @@ function applyChannelDetails() {
                 console.log(res);
 
                 if (res.data.code == 0) {
-
                     ElNotification({
                         message: 'Successfully created channel.',
                         type: 'success'
@@ -460,6 +460,7 @@ function applyChannelDetails() {
             <el-button type="success" :icon="DocumentAdd" @click="showCreateChannelDialog">Add</el-button>
             <el-button type="success" v-loading="loading" element-loading-svg-view-box="-25, -25, 100, 100" :icon="Refresh" @click="refreshChannelList">Refresh</el-button>
             <el-button type="success" v-loading="scheduling" element-loading-svg-view-box="-25, -25, 100, 100" :icon="Timer" @click="testAllChannelLatancy">Test All</el-button>
+            <el-button type="danger" :icon="Delete" @click="deleteDisabledChannels">Delete Disabled Channels</el-button>
         </div>
         <div id="channel_list_container" :style="{ width: channelContainerWidth }">
             <div class="chan">
@@ -486,7 +487,6 @@ function applyChannelDetails() {
                             'N/A' }}</el-button>
                 </text>
                 <span class="op_container">
-                    <!-- <el-button class="op_test" plain>Test</el-button> -->
                     <el-button class="op_switch" :type="!channel.enabled ? 'success' : 'danger'"
                         @click="channel.enabled ? disableChannel(channel.id) : enableChannel(channel.id)">{{ channel.enabled
                             ?
@@ -502,7 +502,6 @@ function applyChannelDetails() {
             </div>
         </div>
 
-        <!-- channel details/new dialog -->
         <el-dialog v-model="detailsDialogVisible"
             :title="showingChannelIndex >= 0 ? 'Channel #' + channelList[showingChannelIndex].id : 'New Channel'">
             <el-form :model="showingChannelData.details">
@@ -516,7 +515,6 @@ function applyChannelDetails() {
                     </el-select>
                 </el-form-item>
 
-                <!--Adapter configuration-->
                 <el-form-item label="Config">
                     <el-input v-model="showingChannelData.details.adapter.config" rows="8" type="textarea" />
                     <el-popover placement="bottom" :title="showingChannelData.details.adapter.type" :width="700" trigger="click">
@@ -526,7 +524,6 @@ function applyChannelDetails() {
                         <pre>{{ usableAdapterMap[showingChannelData.details.adapter.type].config_comment }}</pre>
                     </el-popover>
                 </el-form-item>
-                <!-- config comment, not editable -->
 
                 <el-form-item label="Model Mapping">
                     <el-input v-model="showingChannelData.details.model_mapping" rows="5" type="textarea" />
