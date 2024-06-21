@@ -18,11 +18,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         self.chanmgr = chanmgr
         self.keymgr = keymgr
 
-    def is_empty_response(self, message: str) -> bool:
-        if not message or message.isspace():
-            return True
-        return all(char in '\u0000' for char in message)
-
     async def __stream_query(
         self,
         chan: channel.Channel,
@@ -52,16 +47,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     if not resp.normal_message and resp.finish_reason == response.FinishReason.NULL:
                         continue
 
-                    if self.is_empty_response(resp.normal_message):
-                        continue
-
                     record.resp_message_length += len(resp.normal_message)
                     generated_content += resp.normal_message
 
                     yield f"data: {json.dumps({'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
-
-                if not generated_content:
-                    raise ValueError("Generated text is empty")
 
                 record.success = True
                 yield "data: [DONE]\n\n"
@@ -71,6 +60,8 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 raise ValueError("Internal server error") from e
             finally:
                 record.commit()
+                if not generated_content:
+                    raise ValueError("Generated text is empty")
 
         spent_ms = int((time.time() - before) * 1000)
 
@@ -115,13 +106,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 if record.latency < 0:
                     record.latency = time.time() - before
 
-                if resp.normal_message is not None and not self.is_empty_response(resp.normal_message):
+                if resp.normal_message is not None:
                     resp_tmp = resp
                     normal_message += resp.normal_message
                     record.resp_message_length += len(resp.normal_message)
-
-            if not normal_message:
-                raise ValueError("Generated text is empty")
 
             if randomad.enabled:
                 normal_message += ''.join(randomad.generate_ad())
@@ -137,6 +125,9 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             raise ValueError("Internal server error") from e
         finally:
             record.commit()
+
+        if not normal_message:
+            raise ValueError("Generated text is empty")
 
         spent_ms = int((time.time() - before) * 1000)
         prompt_tokens = chan.count_tokens(req.model, req.messages)
