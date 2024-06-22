@@ -127,10 +127,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 normal_message += ''.join(randomad.generate_ad())
 
             record.success = True
-        except exceptions.QueryHandlingError as e:
-            record.error = e
-            record.success = False
-            raise ValueError("Internal server error") from e
         except Exception as e:
             record.error = e
             record.success = False
@@ -189,8 +185,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         auth = quart.request.headers.get("Authorization")
         if auth and auth.startswith("Bearer "):
             auth = auth[7:]
-
-        if req.stream:
-            return await self.__stream_query(chan, req, resp_id)
-        else:
-            return await self.__non_stream_query(chan, req, resp_id)
+        try:
+            if req.stream:
+                return await self.__stream_query(chan, req, resp_id)
+            else:
+                return await self.__non_stream_query(chan, req, resp_id)
+        except Exception as e:
+            raise ValueError("Internal server error") from e
