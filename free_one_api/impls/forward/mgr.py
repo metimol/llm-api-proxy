@@ -36,7 +36,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         before = time.time()
         record.start_time = before
 
-        # calc req msg total length
         req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
         record.req_messages_length = req_msg_total_length
 
@@ -103,7 +102,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         before = time.time()
         record.start_time = before
 
-        # calc req msg total length
         req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
         record.req_messages_length = req_msg_total_length
 
