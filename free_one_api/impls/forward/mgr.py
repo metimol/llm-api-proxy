@@ -3,7 +3,6 @@ import json
 import string
 import random
 import quart
-import unicodedata
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
@@ -24,9 +23,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             return True
         return all(char in '\u0000' for char in message)
 
-    def normalize_text(self, text: str) -> str:
-        return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
-
     async def __stream_query(
         self,
         chan: channel.Channel,
@@ -40,6 +36,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         before = time.time()
         record.start_time = before
 
+        # calc req msg total length
         req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
         record.req_messages_length = req_msg_total_length
 
@@ -58,7 +55,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     if self.is_empty_response(resp.normal_message):
                         continue
 
-                    resp.normal_message = self.normalize_text(resp.normal_message)
                     record.resp_message_length += len(resp.normal_message)
                     generated_content += resp.normal_message
 
@@ -107,6 +103,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         before = time.time()
         record.start_time = before
 
+        # calc req msg total length
         req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
         record.req_messages_length = req_msg_total_length
 
@@ -126,12 +123,14 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             if not normal_message:
                 raise ValueError("Generated text is empty")
 
-            normal_message = self.normalize_text(normal_message)
-
             if randomad.enabled:
                 normal_message += ''.join(randomad.generate_ad())
 
             record.success = True
+        except exceptions.QueryHandlingError as e:
+            record.error = e
+            record.success = False
+            raise ValueError("Internal server error") from e
         except Exception as e:
             record.error = e
             record.success = False
