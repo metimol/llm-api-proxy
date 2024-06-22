@@ -1,9 +1,9 @@
-import unicodedata
 import time
 import json
 import string
 import random
 import quart
+import unicodedata
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
@@ -26,6 +26,73 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
     def normalize_text(self, text: str) -> str:
         return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+
+    async def __stream_query(
+        self,
+        chan: channel.Channel,
+        req: request.Request,
+        resp_id: str,
+    ) -> quart.Response:
+        record: evaluation.Record = evaluation.Record()
+        record.stream = True
+        chan.eval.add_record(record)
+
+        before = time.time()
+        record.start_time = before
+
+        req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
+        record.req_messages_length = req_msg_total_length
+
+        t = int(time.time())
+
+        async def _gen():
+            generated_content = ""
+            try:
+                async for resp in chan.adapter.query(req):
+                    if record.latency < 0:
+                        record.latency = time.time() - before
+
+                    if not resp.normal_message and resp.finish_reason == response.FinishReason.NULL:
+                        continue
+
+                    if self.is_empty_response(resp.normal_message):
+                        continue
+
+                    resp.normal_message = self.normalize_text(resp.normal_message)
+                    record.resp_message_length += len(resp.normal_message)
+                    generated_content += resp.normal_message
+
+                    yield f"data: {json.dumps({'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
+
+                if not generated_content:
+                    raise ValueError("Generated text is empty")
+
+                record.success = True
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                record.error = e
+                record.success = False
+                raise ValueError("Internal server error") from e
+            finally:
+                record.commit()
+
+        spent_ms = int((time.time() - before) * 1000)
+
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Transfer-Encoding": "chunked",
+            "Connection": "keep-alive",
+            "openai-processing-ms": str(spent_ms),
+            "openai-version": "2020-10-01",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+
+        return quart.Response(
+            _gen(),
+            mimetype="text/event-stream",
+            headers=headers,
+        )
 
     async def __non_stream_query(
         self,
