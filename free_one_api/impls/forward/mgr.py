@@ -25,7 +25,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         return all(char in '\u0000' for char in message)
 
     def normalize_text(self, text: str) -> str:
-        return unicodedata.normalize('NFKD', text).encode('ascii', 'replace').decode('ascii')
+        return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
 
     async def __stream_query(
         self,
