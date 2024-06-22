@@ -127,10 +127,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 normal_message += ''.join(randomad.generate_ad())
 
             record.success = True
-        except exceptions.QueryHandlingError as e:
-            record.error = e
-            record.success = False
-            raise ValueError("Internal server error") from e
         except Exception as e:
             record.error = e
             record.success = False
@@ -155,7 +151,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": normal_message,
+                        "content": str(normal_message),
                     },
                     "finish_reason": resp_tmp.finish_reason.value if resp_tmp else None
                 }
