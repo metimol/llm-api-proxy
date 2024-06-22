@@ -3,6 +3,7 @@ import json
 import string
 import random
 import quart
+import re
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
@@ -24,7 +25,12 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         return all(char in '\u0000' for char in message)
 
     def normalize_text(self, text: str) -> str:
-        return text.encode().decode('unicode_escape')
+        def replace_unicode_escape(match):
+            return chr(int(match.group(1), 16))
+
+        pattern = re.compile(r'\\u([0-9a-fA-F]{4})')
+        text = pattern.sub(replace_unicode_escape, text)
+        return text
 
     async def __stream_query(
         self,
