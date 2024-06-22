@@ -3,8 +3,7 @@ import json
 import string
 import random
 import quart
-import re
-from unidecode import unidecode
+import ftfy
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
@@ -26,7 +25,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         return all(char in '\u0000' for char in message)
 
     def normalize_text(self, text: str) -> str:
-        return text.encode().decode("unicode-escape")
+        return ftfy.fix_text(text)
 
     async def __stream_query(
         self,
