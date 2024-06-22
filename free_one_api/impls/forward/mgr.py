@@ -4,6 +4,7 @@ import string
 import random
 import quart
 import re
+from unidecode import unidecode
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
@@ -30,7 +31,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
         pattern = re.compile(r'\\u([0-9a-fA-F]{4})')
         text = pattern.sub(replace_unicode_escape, text)
-        return text
+        return unidecode(text)
 
     async def __stream_query(
         self,
