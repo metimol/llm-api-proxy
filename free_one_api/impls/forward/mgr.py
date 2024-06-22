@@ -3,7 +3,7 @@ import json
 import string
 import random
 import quart
-
+import unicodedata
 
 from ...models.forward import mgr as forwardmgr
 from ...models.channel import mgr as channelmgr
