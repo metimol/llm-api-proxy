@@ -19,7 +19,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         self.keymgr = keymgr
 
     def is_empty_response(self, message: str) -> bool:
-        if not message or message.isspace():
+        if not message:
             return True
         return all(char in '\u0000' for char in message)
 
