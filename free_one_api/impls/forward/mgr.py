@@ -57,7 +57,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     record.resp_message_length += len(resp.normal_message)
                     generated_content += resp.normal_message
 
-                    yield f"data: {json.dumps({'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
+                    yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
 
                 if not generated_content:
                     raise ValueError("Generated text is empty")
