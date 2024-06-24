@@ -179,15 +179,13 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         if chan is None:
             raise ValueError("Channel not found")
 
-        resp_id = f"{str(chan.id).zfill(3)}{chan.adapter.__class__.__name__[:5]}{id_suffix}"
-
         auth = quart.request.headers.get("Authorization")
         if auth and auth.startswith("Bearer "):
             auth = auth[7:]
         try:
             if req.stream:
-                return await self.__stream_query(chan, req, resp_id)
+                return await self.__stream_query(chan, req, id_suffix)
             else:
-                return await self.__non_stream_query(chan, req, resp_id)
+                return await self.__non_stream_query(chan, req, id_suffix)
         except Exception as e:
             raise ValueError("Internal server error") from e
