@@ -140,6 +140,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         )
 
         result = {
+            "provider": chan.id,
             "id": f"chatcmpl-{resp_id}",
             "object": "chat.completion",
             "created": int(time.time()),
