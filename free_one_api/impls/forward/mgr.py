@@ -43,6 +43,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
         async def _gen():
             generated_content = ""
+            yielded_text = False
             try:
                 async for resp in chan.adapter.query(req):
                     if record.latency < 0:
@@ -56,14 +57,19 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
                     record.resp_message_length += len(resp.normal_message)
                     generated_content += resp.normal_message
+                    yielded_text = True
 
                     yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
 
-                if not generated_content:
+                if not generated_content and not yielded_text:
                     raise ValueError("Generated text is empty")
 
-                record.success = True
-                yield "data: [DONE]\n\n"
+                if yielded_text:
+                    record.success = True
+                    yield "data: [DONE]\n\n"
+                else:
+                    raise ValueError("No text content generated, but received DONE")
+
             except Exception as e:
                 record.error = e
                 record.success = False
