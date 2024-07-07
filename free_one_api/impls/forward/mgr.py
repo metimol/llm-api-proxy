@@ -87,36 +87,17 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         req: request.Request,
         resp_id: str,
         attempt: int = 0
-    ) -> quart.Response:
+    ):
         if attempt >= 10:
-            return quart.Response(
-                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
-                status=500,
-                mimetype='application/json'
-            )
+            yield json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."})
 
-        async def _gen():
-            try:
-                async for data in self.__stream_query_gen(chan, req, resp_id):
-                    yield data
-            except Exception:
-                await asyncio.sleep(1)  # Optional: add delay before retry
-                async for data in self.__stream_query(chan, req, resp_id, attempt + 1):
-                    yield data
-
-        headers = {
-            "Content-Type": "text/event-stream",
-            "Transfer-Encoding": "chunked",
-            "Connection": "keep-alive",
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        }
-
-        return quart.Response(
-            _gen(),
-            mimetype="text/event-stream",
-            headers=headers,
-        )
+        try:
+            async for data in self.__stream_query_gen(chan, req, resp_id):
+                yield data
+        except Exception:
+            await asyncio.sleep(1)  # Optional: add delay before retry
+            async for data in self.__stream_query(chan, req, resp_id, attempt + 1):
+                yield data
 
     async def __non_stream_query(
         self,
