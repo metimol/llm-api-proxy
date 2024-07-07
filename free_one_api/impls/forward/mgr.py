@@ -2,6 +2,7 @@ import time
 import json
 import string
 import random
+import asyncio
 import quart
 
 from ...models.forward import mgr as forwardmgr
@@ -81,7 +82,9 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             except Exception as e:
                 record.error = e
                 record.success = False
+                # Логируем ошибку и делаем повторную попытку
                 print(f"Error in _gen (attempt {attempt}): {e}")
+                await asyncio.sleep(1)
                 async for item in self.__stream_query(chan, req, resp_id, attempt + 1):
                     yield item
             finally:
@@ -154,7 +157,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             record.success = False
             # Логируем ошибку и делаем повторную попытку
             print(f"Error in __non_stream_query (attempt {attempt}): {e}")
-            await quart.sleep(1)
+            await asyncio.sleep(1)
             return await self.__non_stream_query(chan, req, resp_id, attempt + 1)
         finally:
             record.commit()
@@ -217,5 +220,5 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             # Логируем ошибку и делаем повторную попытку
             print(f"Error in query: {e}")
-            await quart.sleep(1)
+            await asyncio.sleep(1)
             return await self.query(path, req, raw_data)
