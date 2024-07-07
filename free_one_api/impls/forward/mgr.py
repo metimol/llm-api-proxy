@@ -204,6 +204,5 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             else:
                 return await self.__non_stream_query(chan, req, id_suffix)
 
-        except Exception as e:
-            print(f"Error in query (attempt {attempt}): {e}")
+        except:
             return await self.query(path, req, raw_data, attempt + 1)
