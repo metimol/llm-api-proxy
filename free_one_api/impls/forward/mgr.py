@@ -23,12 +23,12 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             return True
         return all(char in '\u0000' for char in message)
 
-    async def __stream_query(
+    async def __stream_query_gen(
         self,
         chan: channel.Channel,
         req: request.Request,
         resp_id: str
-    ) -> quart.Response:
+    ):
         record: evaluation.Record = evaluation.Record()
         record.stream = True
         chan.eval.add_record(record)
@@ -41,58 +41,73 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
         t = int(time.time())
 
-        async def _gen():
-            generated_content = ""
-            yielded_text = False
-            try:
-                async for resp in chan.adapter.query(req):
-                    if record.latency < 0:
-                        record.latency = time.time() - before
+        generated_content = ""
+        yielded_text = False
+        try:
+            async for resp in chan.adapter.query(req):
+                if record.latency < 0:
+                    record.latency = time.time() - before
 
-                    if not resp.normal_message and resp.finish_reason == response.FinishReason.NULL:
-                        continue
+                if not resp.normal_message and resp.finish_reason == response.FinishReason.NULL:
+                    continue
 
-                    if self.is_empty_response(resp.normal_message):
-                        continue
+                if self.is_empty_response(resp.normal_message):
+                    continue
 
-                    record.resp_message_length += len(resp.normal_message)
-                    generated_content += resp.normal_message
-                    yielded_text = True
+                record.resp_message_length += len(resp.normal_message)
+                generated_content += resp.normal_message
+                yielded_text = True
 
-                    yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
+                yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
 
-                if not generated_content and not yielded_text:
-                    record.error = ValueError("Generated text is empty")
-                    record.success = False
-                    yield "data: {\"error\": \"Generated text is empty\"}\n\n"
-                    return
-
-                if yielded_text:
-                    record.success = True
-                    yield "data: [DONE]\n\n"
-                else:
-                    record.error = ValueError("No text content generated, but received DONE")
-                    record.success = False
-                    yield "data: {\"error\": \"No text content generated\"}\n\n"
-                    return
-
-            except Exception as e:
-                record.error = e
+            if not generated_content and not yielded_text:
+                record.error = ValueError("Generated text is empty")
                 record.success = False
-                yield "data: {\"error\": \"Exception occurred\"}\n\n"
-                return
+                raise ValueError("Generated text is empty")
 
-            finally:
-                record.commit()
+            if yielded_text:
+                record.success = True
+                yield "data: [DONE]\n\n"
+            else:
+                record.error = ValueError("No text content generated, but received DONE")
+                record.success = False
+                raise ValueError("No text content generated, but received DONE")
 
-        spent_ms = int((time.time() - before) * 1000)
+        except Exception as e:
+            record.error = e
+            record.success = False
+            raise e
+
+        finally:
+            record.commit()
+
+    async def __stream_query(
+        self,
+        chan: channel.Channel,
+        req: request.Request,
+        resp_id: str,
+        attempt: int = 0
+    ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
+
+        async def _gen():
+            try:
+                async for data in self.__stream_query_gen(chan, req, resp_id):
+                    yield data
+            except Exception:
+                await asyncio.sleep(1)  # Optional: add delay before retry
+                async for data in self.__stream_query(chan, req, resp_id, attempt + 1):
+                    yield data
 
         headers = {
             "Content-Type": "text/event-stream",
             "Transfer-Encoding": "chunked",
             "Connection": "keep-alive",
-            "openai-processing-ms": str(spent_ms),
-            "openai-version": "2020-10-01",
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
         }
@@ -209,13 +224,22 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 auth = auth[7:]
 
             if req.stream:
-                response = await self.__stream_query(chan, req, id_suffix)
+                return quart.Response(
+                    self.__stream_query(chan, req, id_suffix),
+                    mimetype="text/event-stream",
+                    headers={
+                        "Content-Type": "text/event-stream",
+                        "Transfer-Encoding": "chunked",
+                        "Connection": "keep-alive",
+                        "Cache-Control": "no-cache",
+                        "X-Accel-Buffering": "no",
+                    }
+                )
             else:
                 response = await self.__non_stream_query(chan, req, id_suffix)
 
-            # Проверка на наличие ошибки в ответе
-            if response.status_code == 500:
-                raise Exception("Query failed, retrying...")
+                if response.status_code == 500:
+                    raise Exception("Query failed, retrying...")
 
             return response
 
