@@ -83,20 +83,26 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
     async def __stream_query(
         self,
-        chan: channel.Channel,
         req: request.Request,
-        resp_id: str,
-        attempt: int = 0
+        resp_id: str
     ):
-        if attempt >= 10:
-            yield json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."})
+        for attempt in range(10):
+            try:
+                chan: channel.Channel = await self.chanmgr.select_channel("/v1/chat/completions", req, resp_id)
 
-        try:
-            async for data in self.__stream_query_gen(chan, req, resp_id):
-                yield data
-        except Exception:
-            async for data in self.__stream_query(chan, req, resp_id, attempt + 1):
-                yield data
+                if req.model in chan.model_mapping:
+                    req.model = chan.model_mapping[req.model]
+
+                if chan is None:
+                    raise ValueError("Channel not found")
+
+                async for data in self.__stream_query_gen(chan, req, resp_id):
+                    yield data
+                return
+            except Exception as e:
+                continue
+
+        yield json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."})
 
     async def __non_stream_query(
         self,
@@ -191,6 +197,19 @@ class ForwardManager(forwardmgr.AbsForwardManager):
 
         id_suffix = "".join(random.choices(string.ascii_letters + string.digits, k=21))
         try:
+            if path == "/v1/chat/completions" and req.stream:
+                return quart.Response(
+                    self.__stream_query(req, id_suffix),
+                    mimetype="text/event-stream",
+                    headers={
+                        "Content-Type": "text/event-stream",
+                        "Transfer-Encoding": "chunked",
+                        "Connection": "keep-alive",
+                        "Cache-Control": "no-cache",
+                        "X-Accel-Buffering": "no",
+                    }
+                )
+            
             chan: channel.Channel = await self.chanmgr.select_channel(path, req, id_suffix)
 
             if req.model in chan.model_mapping:
@@ -203,23 +222,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             if auth and auth.startswith("Bearer "):
                 auth = auth[7:]
 
-            if req.stream:
-                return quart.Response(
-                    self.__stream_query(chan, req, id_suffix),
-                    mimetype="text/event-stream",
-                    headers={
-                        "Content-Type": "text/event-stream",
-                        "Transfer-Encoding": "chunked",
-                        "Connection": "keep-alive",
-                        "Cache-Control": "no-cache",
-                        "X-Accel-Buffering": "no",
-                    }
-                )
-            else:
-                response = await self.__non_stream_query(chan, req, id_suffix)
+            response = await self.__non_stream_query(chan, req, id_suffix)
 
-                if response.status_code == 500:
-                    raise Exception("Query failed, retrying...")
+            if response.status_code == 500:
+                raise Exception("Query failed, retrying...")
 
             return response
 
