@@ -28,7 +28,15 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         chan: channel.Channel,
         req: request.Request,
         resp_id: str,
+        attempt: int = 0
     ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
+
         record: evaluation.Record = evaluation.Record()
         record.stream = True
         chan.eval.add_record(record)
@@ -73,7 +81,11 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             except Exception as e:
                 record.error = e
                 record.success = False
-                raise ValueError("Internal server error") from e
+                # Логируем ошибку и делаем повторную попытку
+                print(f"Error in _gen (attempt {attempt}): {e}")
+                await quart.sleep(1)
+                async for item in self.__stream_query(chan, req, resp_id, attempt + 1):
+                    yield item
             finally:
                 record.commit()
 
@@ -100,7 +112,15 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         chan: channel.Channel,
         req: request.Request,
         resp_id: str,
+        attempt: int = 0
     ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
+
         record = evaluation.Record()
         record.stream = False
         chan.eval.add_record(record)
@@ -134,7 +154,10 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             record.error = e
             record.success = False
-            raise ValueError("Internal server error") from e
+            # Логируем ошибку и делаем повторную попытку
+            print(f"Error in __non_stream_query (attempt {attempt}): {e}")
+            await quart.sleep(1)
+            return await self.__non_stream_query(chan, req, resp_id, attempt + 1)
         finally:
             record.commit()
 
@@ -194,4 +217,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             else:
                 return await self.__non_stream_query(chan, req, id_suffix)
         except Exception as e:
-            raise ValueError("Internal server error") from e
+            # Логируем ошибку и делаем повторную попытку
+            print(f"Error in query: {e}")
+            await quart.sleep(1)
+            return await self.query(path, req, raw_data)
