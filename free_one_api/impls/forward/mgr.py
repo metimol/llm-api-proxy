@@ -64,7 +64,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 if not generated_content and not yielded_text:
                     record.error = ValueError("Generated text is empty")
                     record.success = False
-                    yield None
+                    yield "data: {\"error\": \"Generated text is empty\"}\n\n"
                     return
 
                 if yielded_text:
@@ -73,13 +73,13 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 else:
                     record.error = ValueError("No text content generated, but received DONE")
                     record.success = False
-                    yield None
+                    yield "data: {\"error\": \"No text content generated\"}\n\n"
                     return
 
             except Exception as e:
                 record.error = e
                 record.success = False
-                yield None
+                yield "data: {\"error\": \"Exception occurred\"}\n\n"
                 return
 
             finally:
@@ -135,7 +135,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             if not normal_message:
                 record.error = ValueError("Generated text is empty")
                 record.success = False
-                return None
+                return quart.jsonify({"error": "Generated text is empty"}), 500
 
             if randomad.enabled:
                 normal_message += ''.join(randomad.generate_ad())
@@ -144,7 +144,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             record.error = e
             record.success = False
-            return None
+            return quart.jsonify({"error": "Exception occurred"}), 500
         finally:
             record.commit()
 
@@ -213,10 +213,11 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             else:
                 response = await self.__non_stream_query(chan, req, id_suffix)
 
-            if response is None:
+            # Проверка на наличие ошибки в ответе
+            if response.status_code == 500:
                 raise Exception("Query failed, retrying...")
 
             return response
 
-        except Exception:
+        except Exception as e:
             return await self.query(path, req, raw_data, attempt + 1)
