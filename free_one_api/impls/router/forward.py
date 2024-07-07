@@ -46,8 +46,7 @@ class ForwardAPIGroup(routergroup.APIGroup):
                 )
                 return result
 
-            except Exception as e:
-                print(f"Error in chat_completion: {e}")
+            except:
                 return quart.jsonify(
                     {
                         "error": {
