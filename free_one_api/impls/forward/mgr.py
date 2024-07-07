@@ -64,7 +64,8 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 if not generated_content and not yielded_text:
                     record.error = ValueError("Generated text is empty")
                     record.success = False
-                    return None
+                    yield None
+                    return
 
                 if yielded_text:
                     record.success = True
@@ -72,12 +73,15 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 else:
                     record.error = ValueError("No text content generated, but received DONE")
                     record.success = False
-                    return None
+                    yield None
+                    return
 
             except Exception as e:
                 record.error = e
                 record.success = False
-                return None
+                yield None
+                return
+
             finally:
                 record.commit()
 
