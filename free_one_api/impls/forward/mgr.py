@@ -28,16 +28,8 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         self,
         chan: channel.Channel,
         req: request.Request,
-        resp_id: str,
-        attempt: int = 0
+        resp_id: str
     ) -> quart.Response:
-        if attempt >= 10:
-            return quart.Response(
-                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
-                status=500,
-                mimetype='application/json'
-            )
-
         record: evaluation.Record = evaluation.Record()
         record.stream = True
         chan.eval.add_record(record)
@@ -82,11 +74,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             except Exception as e:
                 record.error = e
                 record.success = False
-                # Логируем ошибку и делаем повторную попытку
-                print(f"Error in _gen (attempt {attempt}): {e}")
-                await asyncio.sleep(1)
-                async for item in (await self.__stream_query(chan, req, resp_id, attempt + 1)).response:
-                    yield item
+                raise e
             finally:
                 record.commit()
 
@@ -112,16 +100,8 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         self,
         chan: channel.Channel,
         req: request.Request,
-        resp_id: str,
-        attempt: int = 0
+        resp_id: str
     ) -> quart.Response:
-        if attempt >= 10:
-            return quart.Response(
-                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
-                status=500,
-                mimetype='application/json'
-            )
-
         record = evaluation.Record()
         record.stream = False
         chan.eval.add_record(record)
@@ -155,10 +135,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             record.error = e
             record.success = False
-            # Логируем ошибку и делаем повторную попытку
-            print(f"Error in __non_stream_query (attempt {attempt}): {e}")
-            await asyncio.sleep(1)
-            return await self.__non_stream_query(chan, req, resp_id, attempt + 1)
+            raise e
         finally:
             record.commit()
 
@@ -199,26 +176,36 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         path: str,
         req: request.Request,
         raw_data: dict,
+        attempt: int = 0
     ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
+
         id_suffix = "".join(random.choices(string.ascii_letters + string.digits, k=21))
-        chan: channel.Channel = await self.chanmgr.select_channel(path, req, id_suffix)
-
-        if req.model in chan.model_mapping:
-            req.model = chan.model_mapping[req.model]
-
-        if chan is None:
-            raise ValueError("Channel not found")
-
-        auth = quart.request.headers.get("Authorization")
-        if auth and auth.startswith("Bearer "):
-            auth = auth[7:]
         try:
+            chan: channel.Channel = await self.chanmgr.select_channel(path, req, id_suffix)
+
+            if req.model in chan.model_mapping:
+                req.model = chan.model_mapping[req.model]
+
+            if chan is None:
+                raise ValueError("Channel not found")
+
+            auth = quart.request.headers.get("Authorization")
+            if auth and auth.startswith("Bearer "):
+                auth = auth[7:]
+
             if req.stream:
                 return await self.__stream_query(chan, req, id_suffix)
             else:
                 return await self.__non_stream_query(chan, req, id_suffix)
+
         except Exception as e:
             # Логируем ошибку и делаем повторную попытку
-            print(f"Error in query: {e}")
+            print(f"Error in query (attempt {attempt}): {e}")
             await asyncio.sleep(1)
-            return await self.query(path, req, raw_data)
+            return await self.query(path, req, raw_data, attempt + 1)
