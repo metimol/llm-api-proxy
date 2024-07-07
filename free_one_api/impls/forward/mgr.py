@@ -85,7 +85,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 # Логируем ошибку и делаем повторную попытку
                 print(f"Error in _gen (attempt {attempt}): {e}")
                 await asyncio.sleep(1)
-                async for item in self.__stream_query(chan, req, resp_id, attempt + 1):
+                async for item in (await self.__stream_query(chan, req, resp_id, attempt + 1)).response:
                     yield item
             finally:
                 record.commit()
