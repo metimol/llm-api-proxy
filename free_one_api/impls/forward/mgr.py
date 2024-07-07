@@ -205,7 +205,5 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 return await self.__non_stream_query(chan, req, id_suffix)
 
         except Exception as e:
-            # Логируем ошибку и делаем повторную попытку
             print(f"Error in query (attempt {attempt}): {e}")
-            await asyncio.sleep(1)
             return await self.query(path, req, raw_data, attempt + 1)
