@@ -28,19 +28,7 @@ class ForwardAPIGroup(routergroup.APIGroup):
         self.fwdmgr = fwdmgr
 
         @self.api("/v1/chat/completions", ["POST"], auth=True)
-        async def chat_completion(attempt=0):
-            if attempt >= 10:
-                return quart.jsonify(
-                    {
-                        "error": {
-                            "message": "Error occurred while handling your request. You can retry or contact your admin.",
-                            "type": "requests",
-                            "param": None,
-                            "code": None
-                        }
-                    }
-                ), 500
-
+        async def chat_completion():
             try:
                 raw_data = await quart.request.get_json()
 
@@ -59,9 +47,18 @@ class ForwardAPIGroup(routergroup.APIGroup):
                 return result
 
             except Exception as e:
-                # Ждем перед повторной попыткой, чтобы избежать перегрузки системы
-                await quart.sleep(1)
-                return await chat_completion(attempt + 1)
+                # Логируем ошибку для отладки
+                print(f"Error in chat_completion: {e}")
+                return quart.jsonify(
+                    {
+                        "error": {
+                            "message": "Error occurred while handling your request. You can retry or contact your admin.",
+                            "type": "requests",
+                            "param": None,
+                            "code": None
+                        }
+                    }
+                ), 500
 
     def get_tokens(self) -> list[str]:
         key_obj_list: apikey.FreeOneAPIKey = self.keymgr.get_key_list()
