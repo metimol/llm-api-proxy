@@ -1,159 +1,223 @@
-import typing
-import uuid
-import random
-import requests
-import ujson
-import httpx
+import time
 import json
+import string
+import random
+import quart
 
-from ...models import adapter
-from ...models.adapter import llm
-from ...entities import request
-from ...entities import response, exceptions
+from ...models.forward import mgr as forwardmgr
+from ...models.channel import mgr as channelmgr
+from ...models.key import mgr as apikeymgr
+from ...entities import channel, apikey, request, response, exceptions
+from ...common import randomad
 from ...models.channel import evaluation
 
 
-@adapter.llm_adapter
-class NextChatAdapter(llm.LLMLibAdapter):
+class ForwardManager(forwardmgr.AbsForwardManager):
 
-    @classmethod
-    def name(cls) -> str:
-        return "NextChat/GPT"
+    def __init__(self, chanmgr: channelmgr.AbsChannelManager, keymgr: apikeymgr.AbsAPIKeyManager):
+        self.chanmgr = chanmgr
+        self.keymgr = keymgr
 
-    @classmethod
-    def description(cls) -> str:
-        return "Use NextChat with openai format."
+    def is_empty_response(self, message: str) -> bool:
+        if not message:
+            return True
+        return all(char in '\u0000' for char in message)
 
-    def supported_models(self) -> list[str]:
-        models_string = self.config.get("models", "gpt-3.5-turbo")
-        return models_string.split(",")
+    async def __stream_query(
+        self,
+        chan: channel.Channel,
+        req: request.Request,
+        resp_id: str,
+        attempt: int = 0
+    ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
 
-    def function_call_supported(self) -> bool:
-        return False
+        record: evaluation.Record = evaluation.Record()
+        record.stream = True
+        chan.eval.add_record(record)
 
-    def stream_mode_supported(self) -> bool:
-        return True    
+        before = time.time()
+        record.start_time = before
 
-    def multi_round_supported(self) -> bool:
-        return True
+        req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
+        record.req_messages_length = req_msg_total_length
 
-    @classmethod
-    def config_comment(cls) -> str:
-        return \
-"""Please provide your Openai API key, and Openai API base:
+        t = int(time.time())
 
-{
-    "url": "your_chat_url",
-    "models": "Optional. Default is 'gpt-3.5-turbo'.
-It should be a list of available models in this API, separated by commas without spaces. 
-For example: 'gpt4,gpt-4-o,gpt-4-turbo'
-}
-"""
+        async def _gen():
+            generated_content = ""
+            yielded_text = False
+            try:
+                async for resp in chan.adapter.query(req):
+                    if record.latency < 0:
+                        record.latency = time.time() - before
 
-    @classmethod
-    def supported_path(cls) -> str:
-        return "/v1/chat/completions"
+                    if not resp.normal_message and resp.finish_reason == response.FinishReason.NULL:
+                        continue
 
-    def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
-        self.config = config
-        self.eval = eval
+                    if self.is_empty_response(resp.normal_message):
+                        continue
 
-    async def test(self) -> typing.Union[bool, str]:
+                    record.resp_message_length += len(resp.normal_message)
+                    generated_content += resp.normal_message
+                    yielded_text = True
+
+                    yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
+
+                if not generated_content and not yielded_text:
+                    raise ValueError("Generated text is empty")
+
+                if yielded_text:
+                    record.success = True
+                    yield "data: [DONE]\n\n"
+                else:
+                    raise ValueError("No text content generated, but received DONE")
+
+            except Exception as e:
+                record.error = e
+                record.success = False
+                # Логируем ошибку и делаем повторную попытку
+                print(f"Error in _gen (attempt {attempt}): {e}")
+                await quart.sleep(1)
+                async for item in self.__stream_query(chan, req, resp_id, attempt + 1):
+                    yield item
+            finally:
+                record.commit()
+
+        spent_ms = int((time.time() - before) * 1000)
+
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Transfer-Encoding": "chunked",
+            "Connection": "keep-alive",
+            "openai-processing-ms": str(spent_ms),
+            "openai-version": "2020-10-01",
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+
+        return quart.Response(
+            _gen(),
+            mimetype="text/event-stream",
+            headers=headers,
+        )
+
+    async def __non_stream_query(
+        self,
+        chan: channel.Channel,
+        req: request.Request,
+        resp_id: str,
+        attempt: int = 0
+    ) -> quart.Response:
+        if attempt >= 10:
+            return quart.Response(
+                json.dumps({"error": "Error occurred while handling your request. You can retry or contact your admin."}),
+                status=500,
+                mimetype='application/json'
+            )
+
+        record = evaluation.Record()
+        record.stream = False
+        chan.eval.add_record(record)
+
+        before = time.time()
+        record.start_time = before
+
+        req_msg_total_length = sum(len(str(k)) + len(str(v)) for msg in req.messages for k, v in msg.items())
+        record.req_messages_length = req_msg_total_length
+
+        normal_message = ""
+        resp_tmp: response.Response = None
+
         try:
-            api_url = self.config["url"]
-            models = self.supported_models()
-            model = "gpt-3.5-turbo" if "gpt-3.5-turbo" in models else random.choice(models)
-            data = {
-                "model": model,
-                "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
-                "stream": False
-            }
-            headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
-            }
-            async with httpx.AsyncClient(verify=False) as client:
-                response = await client.post(f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers, timeout=None, follow_redirects=True)
-                response_data = response.json()
-                response_content = response_data["choices"][0]["message"]["content"]
+            async for resp in chan.adapter.query(req):
+                if record.latency < 0:
+                    record.latency = time.time() - before
 
-            return True, ""
-        except:
-            return False, "NextChat test failed."
+                if resp.normal_message is not None and not self.is_empty_response(resp.normal_message):
+                    resp_tmp = resp
+                    normal_message += resp.normal_message
+                    record.resp_message_length += len(resp.normal_message)
 
-    async def create_completion_data(self, chunk):
+            if not normal_message:
+                raise ValueError("Generated text is empty")
+
+            if randomad.enabled:
+                normal_message += ''.join(randomad.generate_ad())
+
+            record.success = True
+        except Exception as e:
+            record.error = e
+            record.success = False
+            # Логируем ошибку и делаем повторную попытку
+            print(f"Error in __non_stream_query (attempt {attempt}): {e}")
+            await quart.sleep(1)
+            return await self.__non_stream_query(chan, req, resp_id, attempt + 1)
+        finally:
+            record.commit()
+
+        spent_ms = int((time.time() - before) * 1000)
+        prompt_tokens = chan.count_tokens(req.model, req.messages)
+        completion_tokens = chan.count_tokens(
+            req.model,
+            [{"role": "assistant", "content": normal_message}]
+        )
+
+        result = {
+            "provider": chan.id,
+            "id": f"chatcmpl-{resp_id}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": req.model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": normal_message,
+                    },
+                    "finish_reason": resp_tmp.finish_reason.value if resp_tmp else None
+                }
+            ],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            }
+        }
+
+        return quart.jsonify(result)
+
+    async def query(
+        self,
+        path: str,
+        req: request.Request,
+        raw_data: dict,
+    ) -> quart.Response:
+        id_suffix = "".join(random.choices(string.ascii_letters + string.digits, k=21))
+        chan: channel.Channel = await self.chanmgr.select_channel(path, req, id_suffix)
+
+        if req.model in chan.model_mapping:
+            req.model = chan.model_mapping[req.model]
+
+        if chan is None:
+            raise ValueError("Channel not found")
+
+        auth = quart.request.headers.get("Authorization")
+        if auth and auth.startswith("Bearer "):
+            auth = auth[7:]
         try:
-            return ujson.loads(chunk)
-        except ValueError as e:
-            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
-
-    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
-        messages = req.messages
-        model = req.model
-        random_int = random.randint(0, 1000000000)
-        api_url = self.config["url"]
-
-        async with httpx.AsyncClient(timeout=None, verify=False, follow_redirects=True) as client:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0",
-                "Accept": "text/event-stream",
-                "Accept-Language": "de,en-US;q=0.7,en;q=0.3",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Content-Type": "application/json",
-                "Referer": api_url,
-                "x-requested-with": "XMLHttpRequest",
-                "Origin": api_url,
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Connection": "keep-alive",
-                "Alt-Used": api_url,
-            }
-            data = {
-                "model": model,
-                "messages": messages,
-                "stream": True
-            }
-            async with client.stream("POST", f"{api_url}/api/openai/v1/chat/completions", json=data, headers=headers) as model_response:
-                model_response.raise_for_status()
-                async for line in model_response.aiter_lines():
-                    if line:
-                        line_content = line[6:]
-                        if line_content == "[DONE]":
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.STOP,
-                                normal_message="",
-                                function_call=None
-                            )
-                            break
-                        try:
-                            chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"][0]["finish_reason"] == "stop":
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                            else:
-                                text = chunk["choices"][0]["delta"]["content"]
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                        except ValueError as e:
-                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
+            if req.stream:
+                return await self.__stream_query(chan, req, id_suffix)
+            else:
+                return await self.__non_stream_query(chan, req, id_suffix)
+        except Exception as e:
+            # Логируем ошибку и делаем повторную попытку
+            print(f"Error in query: {e}")
+            await quart.sleep(1)
+            return await self.query(path, req, raw_data)
