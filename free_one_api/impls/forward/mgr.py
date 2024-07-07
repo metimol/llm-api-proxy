@@ -12,7 +12,6 @@ from ...entities import channel, apikey, request, response, exceptions
 from ...common import randomad
 from ...models.channel import evaluation
 
-
 class ForwardManager(forwardmgr.AbsForwardManager):
 
     def __init__(self, chanmgr: channelmgr.AbsChannelManager, keymgr: apikeymgr.AbsAPIKeyManager):
@@ -65,6 +64,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 if not generated_content and not yielded_text:
                     record.error = ValueError("Generated text is empty")
                     record.success = False
+                    return None
 
                 if yielded_text:
                     record.success = True
@@ -72,10 +72,12 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 else:
                     record.error = ValueError("No text content generated, but received DONE")
                     record.success = False
+                    return None
 
             except Exception as e:
                 record.error = e
                 record.success = False
+                return None
             finally:
                 record.commit()
 
@@ -129,6 +131,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             if not normal_message:
                 record.error = ValueError("Generated text is empty")
                 record.success = False
+                return None
 
             if randomad.enabled:
                 normal_message += ''.join(randomad.generate_ad())
@@ -137,6 +140,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             record.error = e
             record.success = False
+            return None
         finally:
             record.commit()
 
@@ -201,9 +205,14 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                 auth = auth[7:]
 
             if req.stream:
-                return await self.__stream_query(chan, req, id_suffix)
+                response = await self.__stream_query(chan, req, id_suffix)
             else:
-                return await self.__non_stream_query(chan, req, id_suffix)
+                response = await self.__non_stream_query(chan, req, id_suffix)
+
+            if response is None:
+                raise Exception("Query failed, retrying...")
+
+            return response
 
         except Exception:
             return await self.query(path, req, raw_data, attempt + 1)
