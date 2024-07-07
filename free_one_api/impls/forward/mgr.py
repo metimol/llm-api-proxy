@@ -95,7 +95,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             async for data in self.__stream_query_gen(chan, req, resp_id):
                 yield data
         except Exception:
-            await asyncio.sleep(1)  # Optional: add delay before retry
             async for data in self.__stream_query(chan, req, resp_id, attempt + 1):
                 yield data
 
