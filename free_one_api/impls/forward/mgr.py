@@ -81,9 +81,7 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             except Exception as e:
                 record.error = e
                 record.success = False
-                # Логируем ошибку и делаем повторную попытку
                 print(f"Error in _gen (attempt {attempt}): {e}")
-                await quart.sleep(1)
                 async for item in self.__stream_query(chan, req, resp_id, attempt + 1):
                     yield item
             finally:
