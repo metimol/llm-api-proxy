@@ -47,7 +47,6 @@ class ForwardAPIGroup(routergroup.APIGroup):
                 return result
 
             except Exception as e:
-                # Логируем ошибку для отладки
                 print(f"Error in chat_completion: {e}")
                 return quart.jsonify(
                     {
