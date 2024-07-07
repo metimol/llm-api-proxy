@@ -140,7 +140,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                             break
                         try:
                             chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"] and chunk["choices"][0]["finish_reason"] == "stop":
+                            if chunk["choices"][0]["finish_reason"] == "stop":
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
@@ -148,7 +148,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                                     function_call=None
                                 )
                             else:
-                                text = chunk["choices"][0].get("delta", {}).get("content", "")
+                                text = chunk["choices"][0]["delta"]["content"]
                                 yield response.Response(
                                     id=random_int,
                                     finish_reason=response.FinishReason.NULL,
