@@ -63,18 +63,19 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     yield f"data: {json.dumps({'provider': chan.id, 'id': f'chatcmpl-{resp_id}', 'object': 'chat.completion.chunk', 'created': t, 'model': req.model, 'choices': [{'index': 0, 'delta': {'content': resp.normal_message} if resp.normal_message else {}, 'finish_reason': resp.finish_reason.value}]})}\n\n"
 
                 if not generated_content and not yielded_text:
-                    raise ValueError("Generated text is empty")
+                    record.error = ValueError("Generated text is empty")
+                    record.success = False
 
                 if yielded_text:
                     record.success = True
                     yield "data: [DONE]\n\n"
                 else:
-                    raise ValueError("No text content generated, but received DONE")
+                    record.error = ValueError("No text content generated, but received DONE")
+                    record.success = False
 
             except Exception as e:
                 record.error = e
                 record.success = False
-                raise e
             finally:
                 record.commit()
 
@@ -126,7 +127,8 @@ class ForwardManager(forwardmgr.AbsForwardManager):
                     record.resp_message_length += len(resp.normal_message)
 
             if not normal_message:
-                raise ValueError("Generated text is empty")
+                record.error = ValueError("Generated text is empty")
+                record.success = False
 
             if randomad.enabled:
                 normal_message += ''.join(randomad.generate_ad())
@@ -135,7 +137,6 @@ class ForwardManager(forwardmgr.AbsForwardManager):
         except Exception as e:
             record.error = e
             record.success = False
-            raise e
         finally:
             record.commit()
 
@@ -204,5 +205,5 @@ class ForwardManager(forwardmgr.AbsForwardManager):
             else:
                 return await self.__non_stream_query(chan, req, id_suffix)
 
-        except:
+        except Exception:
             return await self.query(path, req, raw_data, attempt + 1)
