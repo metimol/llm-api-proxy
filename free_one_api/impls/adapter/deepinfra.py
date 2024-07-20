@@ -87,7 +87,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'Referer': 'https://deepinfra.com/',
             'Content-Type': 'application/json',
             'X-Deepinfra-Source': 'web-page',
-            'Content-Length': str(secrets.randbelow(500)),
             'Origin': 'https://deepinfra.com',
             'Connection': 'keep-alive',
             'Sec-Fetch-Dest': 'empty',
