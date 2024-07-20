@@ -6,6 +6,8 @@ import requests
 import ujson
 import httpx
 import json
+import secrets
+from fake_useragent import UserAgent
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -81,10 +83,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 "model": "openchat/openchat_3.5",
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
-            api_key = self.config["key"]
-            headers = {
-                "Authorization": f"Bearer {api_key}"
-            }
+            headers = self.get_headers(UserAgent().random, secrets.randbelow(500))
             async with httpx.AsyncClient() as client:
                 response = await client.post(api_url, json=data, headers=headers, timeout=None)
                 response_data = response.json()
@@ -106,10 +105,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         random_int = random.randint(0, 1000000000)
 
         async with httpx.AsyncClient(timeout=None) as client:
-            api_key = self.config["key"]
-            headers = {
-                "Authorization": f"Bearer {api_key}"
-            }
+            headers = self.get_headers(UserAgent().random, secrets.randbelow(500))
             data = {
                 "model": model,
                 "messages": messages,
