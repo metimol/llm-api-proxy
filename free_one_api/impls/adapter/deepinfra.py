@@ -76,18 +76,18 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     def supported_path(cls) -> str:
         return "/v1/chat/completions"
 
-    def get_headers(self, user_agent: str, content_length: int):
+    def get_headers(self, user_agent: str):
         return {
             'Authority': 'api.deepinfra.com',
             'Host': 'api.deepinfra.com',
-            'User-Agent': str(user_agent),
+            'User-Agent': user_agent,
             'Accept': 'text/event-stream',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br',
             'Referer': 'https://deepinfra.com/',
             'Content-Type': 'application/json',
             'X-Deepinfra-Source': 'web-page',
-            'Content-Length': str(content_length),
+            'Content-Length': str(secrets.randbelow(500)),
             'Origin': 'https://deepinfra.com',
             'Connection': 'keep-alive',
             'Sec-Fetch-Dest': 'empty',
@@ -98,52 +98,50 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
+        self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
 
     async def test(self) -> typing.Union[bool, str]:
         try:
-            api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
             data = {
-                "model": "openchat/openchat_3.5",
+                "model": "mistralai/Mistral-7B-Instruct-v0.2",
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
-            data_json = json.dumps(data)
-            content_length = len(data_json.encode('utf-8'))
-            headers = self.get_headers(UserAgent().random, content_length)
+            headers = self.get_headers(UserAgent().random)
             async with httpx.AsyncClient() as client:
-                response = await client.post(api_url, json=data, headers=headers, timeout=None)
-                response_data = response.json()
+                response = await client.post(self.url, json=data, headers=headers)
                 response.raise_for_status()
+                response_data = response.json()
                 return True, ""
         except Exception as e:
             return False, str(e)
-
-    async def create_completion_data(self, chunk):
-        try:
-            return ujson.loads(chunk)
-        except ValueError as e:
-            raise ValueError(f"Error loading JSON from chunk: {e}\nChunk: {chunk}")
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
         messages = req.messages
         model = req.model
         random_int = random.randint(0, 1000000000)
 
+        data = {
+            "messages": messages,
+            "model": model,
+            "stream": True,
+            "temperature": 0.7,
+            "max_tokens": 150,
+            "top_p": 1.0,
+            "top_k": 50,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0,
+        }
+
+        headers = self.get_headers(UserAgent().random)
+
         async with httpx.AsyncClient() as client:
-            data = {
-                "model": model,
-                "messages": messages,
-                "stream": True
-            }
-            data_json = json.dumps(data)
-            content_length = len(data_json.encode('utf-8'))
-            headers = self.get_headers(UserAgent().random, content_length)
-            
-            async with client.stream("POST", "https://api.deepinfra.com/v1/openai/chat/completions", json=data, headers=headers) as model_response:
-                model_response.raise_for_status()
-                async for line in model_response.aiter_lines():
+            async with client.stream("POST", self.url, json=data, headers=headers) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
                     if line:
-                        line_content = line[6:]
-                        if line_content == "[DONE]":
+                        if line.startswith("data: "):
+                            line = line[6:]
+                        if line == "[DONE]":
                             yield response.Response(
                                 id=random_int,
                                 finish_reason=response.FinishReason.STOP,
@@ -152,15 +150,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                             )
                             break
                         try:
-                            chunk = await self.create_completion_data(line_content)
-                            if chunk["choices"][0]["finish_reason"] == "stop":
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message="",
-                                    function_call=None
-                                )
-                            else:
+                            chunk = ujson.loads(line)
+                            if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
                                 text = chunk["choices"][0]["delta"]["content"]
                                 yield response.Response(
                                     id=random_int,
@@ -169,4 +160,4 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                                     function_call=None
                                 )
                         except ValueError as e:
-                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line_content}")
+                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
