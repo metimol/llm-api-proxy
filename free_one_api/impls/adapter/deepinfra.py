@@ -70,7 +70,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
     @classmethod
     def config_comment(cls) -> str:
-        return 'For this website you don't need any key :)'
+        return 'For this website you don't need any key'
 
     @classmethod
     def supported_path(cls) -> str:
