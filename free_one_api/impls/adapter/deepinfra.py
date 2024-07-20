@@ -76,24 +76,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     def supported_path(cls) -> str:
         return "/v1/chat/completions"
 
-    def get_headers(self, user_agent: str):
-        return {
-            'Authority': 'api.deepinfra.com',
-            'Host': 'api.deepinfra.com',
-            'User-Agent': str(user_agent),
-            'Accept': 'text/event-stream',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Referer': 'https://deepinfra.com/',
-            'Content-Type': 'application/json',
-            'X-Deepinfra-Source': 'web-page',
-            'Origin': 'https://deepinfra.com',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-site'
-        }
-
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
@@ -111,7 +93,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 "presence_penalty": 0.0,
                 "frequency_penalty": 0.0
             }
-            headers = self.get_headers(UserAgent().random)
+            headers = {'X-Deepinfra-Source': 'web-page'}
             async with httpx.AsyncClient() as client:
                 response = await client.post(self.url, json=data, headers=headers)
                 response.raise_for_status()
@@ -137,7 +119,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "frequency_penalty": 0.0
         }
 
-        headers = self.get_headers(UserAgent().random)
+        headers = {'X-Deepinfra-Source': 'web-page'}
 
         async with httpx.AsyncClient() as client:
             async with client.stream("POST", self.url, json=data, headers=headers) as response:
