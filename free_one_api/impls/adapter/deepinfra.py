@@ -2,7 +2,6 @@ import typing
 import random
 import httpx
 import ujson
-import json
 from fake_useragent import UserAgent
 
 from ...models import adapter
@@ -80,6 +79,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
+        self.ua = UserAgent()
 
     async def test(self) -> typing.Union[bool, str]:
         try:
@@ -93,7 +93,10 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 "presence_penalty": 0.0,
                 "frequency_penalty": 0.0
             }
-            headers = {'X-Deepinfra-Source': 'web-page'}
+            headers = {
+                'X-Deepinfra-Source': 'web-page',
+                'User-Agent': self.ua.random
+            }
             async with httpx.AsyncClient() as client:
                 response = await client.post(self.url, json=data, headers=headers)
                 response.raise_for_status()
@@ -119,7 +122,10 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "frequency_penalty": 0.0
         }
 
-        headers = {'X-Deepinfra-Source': 'web-page'}
+        headers = {
+            'X-Deepinfra-Source': 'web-page',
+            'User-Agent': self.ua.random
+        }
 
         async with httpx.AsyncClient() as client:
             async with client.stream("POST", self.url, json=data, headers=headers) as response:
