@@ -80,7 +80,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         return {
             'Authority': 'api.deepinfra.com',
             'Host': 'api.deepinfra.com',
-            'User-Agent': user_agent,
+            'User-Agent': str(user_agent),
             'Accept': 'text/event-stream',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -110,7 +110,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             content_length = len(data_json.encode('utf-8'))
             headers = self.get_headers(UserAgent().random, content_length)
             async with httpx.AsyncClient() as client:
-                response = await client.post(api_url, json=data, headers=headers)
+                response = await client.post(api_url, json=data, headers=headers, timeout=None)
                 response_data = response.json()
                 response.raise_for_status()
                 return True, ""
