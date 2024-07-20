@@ -80,7 +80,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         return {
             'Authority': 'api.deepinfra.com',
             'Host': 'api.deepinfra.com',
-            'User-Agent': user_agent,
+            'User-Agent': str(user_agent),
             'Accept': 'text/event-stream',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -105,6 +105,12 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             data = {
                 "model": "mistralai/Mistral-7B-Instruct-v0.2",
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
+                "temperature": 0.7,
+                "max_tokens": 15000,
+                "top_p": 0.9,
+                "top_k": 0.0,
+                "presence_penalty": 0.0,
+                "frequency_penalty": 0.0
             }
             headers = self.get_headers(UserAgent().random)
             async with httpx.AsyncClient() as client:
@@ -125,11 +131,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "model": model,
             "stream": True,
             "temperature": 0.7,
-            "max_tokens": 150,
-            "top_p": 1.0,
-            "top_k": 50,
+            "max_tokens": 15000,
+            "top_p": 0.9,
+            "top_k": 0.0,
             "presence_penalty": 0.0,
-            "frequency_penalty": 0.0,
+            "frequency_penalty": 0.0
         }
 
         headers = self.get_headers(UserAgent().random)
