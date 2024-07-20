@@ -8,6 +8,7 @@ claude-api
 bardapi
 hugchat
 g4f
+fake_useragent
 revTongYi
 colorlog
 ujson
