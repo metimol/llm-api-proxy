@@ -84,7 +84,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     async def test(self) -> typing.Union[bool, str]:
         try:
             data = {
-                "model": "mistralai/Mistral-7B-Instruct-v0.2",
+                "model": "meta-llama/Meta-Llama-3-70B-Instruct",
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
                 "temperature": 0.7,
                 "max_tokens": 15000,
