@@ -126,19 +126,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 continue
         return False, "Could not find a working proxy after multiple retries."
 
-    async def get_proxy_list(self):
-        proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(proxy_url)
-            response.raise_for_status()
-            proxy_list = response.text.strip().split("\n")
-        return proxy_list
-
     async def get_working_proxy(self):
         proxy_list = await self.get_proxy_list()
         for proxy in proxy_list:
             try:
-                test_url = "https://www.google.com"
+                test_url = "https://api.deepinfra.com/v1/openai/models"
                 async with httpx.AsyncClient(proxies={"http": proxy, "https": proxy}) as client:
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
