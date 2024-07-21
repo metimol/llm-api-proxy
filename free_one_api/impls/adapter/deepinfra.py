@@ -50,29 +50,21 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.proxy_provider = FreeProxy()
 
     async def test(self) -> typing.Union[bool, str]:
-        try:
-            data = {
-                "model": "meta-llama/Meta-Llama-3-70B-Instruct",
-                "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
-                "temperature": 0.7,
-                "max_tokens": 15000,
-                "top_p": 0.9,
-                "top_k": 0.0,
-                "presence_penalty": 0.0,
-                "frequency_penalty": 0.0
-            }
-            headers = {
-                'X-Deepinfra-Source': 'web-page',
-                'User-Agent': self.ua.random
-            }
-            proxy_address = await self.get_working_proxy()
-            async with httpx.AsyncClient(proxies=proxy_address) as client:
-                response = await client.post(self.url, json=data, headers=headers)
-                response.raise_for_status()
-                response_data = response.json()
-                return True, ""
-        except Exception as e:
-            return False, str(e)
+        data = {
+            "model": "meta-llama/Meta-Llama-3-70B-Instruct",
+            "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
+            "temperature": 0.7,
+            "max_tokens": 15000,
+            "top_p": 0.9,
+            "top_k": 0.0,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0
+        }
+        headers = {
+            'X-Deepinfra-Source': 'web-page',
+            'User-Agent': self.ua.random
+        }
+        return await self.make_request(self.url, data, headers, is_test=True)
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         messages = req.messages
@@ -96,40 +88,49 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': self.ua.random
         }
 
+        result = await self.make_request(self.url, data, headers)
+        if isinstance(result, httpx.Response):
+            async for line in result.aiter_lines():
+                if line:
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    if line == "[DONE]":
+                        yield response.Response(
+                            id=random_int,
+                            finish_reason=response.FinishReason.STOP,
+                            normal_message="",
+                            function_call=None
+                        )
+                        break
+                    try:
+                        chunk = ujson.loads(line)
+                        if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                            text = chunk["choices"][0]["delta"]["content"]
+                            yield response.Response(
+                                id=random_int,
+                                finish_reason=response.FinishReason.NULL,
+                                normal_message=text,
+                                function_call=None
+                            )
+                    except ValueError as e:
+                        raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
+        else:
+            raise FreeProxyException("Could not find a working proxy after multiple retries.")
+
+    async def make_request(self, url, data, headers, is_test=False):
         for _ in range(30):
             try:
                 proxy_address = await self.get_working_proxy()
                 async with httpx.AsyncClient(proxies=proxy_address) as client:
-                    async with client.stream("POST", self.url, json=data, headers=headers) as response:
+                    if is_test:
+                        response = await client.post(url, json=data, headers=headers)
                         response.raise_for_status()
-                        async for line in response.aiter_lines():
-                            if line:
-                                if line.startswith("data: "):
-                                    line = line[6:]
-                                if line == "[DONE]":
-                                    yield response.Response(
-                                        id=random_int,
-                                        finish_reason=response.FinishReason.STOP,
-                                        normal_message="",
-                                        function_call=None
-                                    )
-                                    break
-                                try:
-                                    chunk = ujson.loads(line)
-                                    if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                                        text = chunk["choices"][0]["delta"]["content"]
-                                        yield response.Response(
-                                            id=random_int,
-                                            finish_reason=response.FinishReason.NULL,
-                                            normal_message=text,
-                                            function_call=None
-                                        )
-                                except ValueError as e:
-                                    raise ValueError(f"JSON decoding error: {e}\nLine content: {line})
-                        return
+                        return True, ""
+                    else:
+                        return await client.stream("POST", url, json=data, headers=headers)
             except (httpx.HTTPStatusError, httpx.RequestError) as e:
                 continue
-        raise FreeProxyException("Could not find a working proxy after multiple retries.")
+        return False, "Could not find a working proxy after multiple retries."
 
     async def get_working_proxy(self):
         for _ in range(30):
@@ -140,6 +141,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     response = await client.get(test_url)
                     if response.status_code == 200:
                         return {"http": proxy, "https": proxy}
-            except FreeProxyException:
+            except Exception:
                 continue
-        raise FreeProxyProxy
+        raise FreeProxyException("Could not find a working proxy after multiple retries.")
