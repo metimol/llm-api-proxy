@@ -87,24 +87,29 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
 
-        async with await self.make_request(self.BASE_URL, data, headers) as result:
-            if result.status_code == 200:
-                async for line in result.aiter_lines():
-                    if line:
-                        yield from self._process_line(line, random_int)
-            else:
-                raise Exception(f"HTTP request failed with status code: {result.status_code}")
+        client_kwargs = {}
+        if self.use_proxy:
+            client_kwargs['proxies'] = await self.get_working_proxy()
+
+        async with httpx.AsyncClient(**client_kwargs) as client:
+            async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
+                if result.status_code == 200:
+                    async for line in result.aiter_lines():
+                        if line:
+                            for response_item in self._process_line(line, random_int):
+                                yield response_item
+                else:
+                    raise Exception(f"HTTP request failed with status code: {result.status_code}")
 
     async def make_request(self, url, data, headers, is_test=False):
-        client_kwargs = {'proxies': await self.get_working_proxy()} if self.use_proxy else {}
+        client_kwargs = {}
+        if self.use_proxy:
+            client_kwargs['proxies'] = await self.get_working_proxy()
         
         async with httpx.AsyncClient(**client_kwargs) as client:
-            if is_test:
-                response = await client.post(url, json=data, headers=headers)
-                response.raise_for_status()
-                return True, ""
-            else:
-                return await client.stream("POST", url, json=data, headers=headers)
+            response = await client.post(url, json=data, headers=headers)
+            response.raise_for_status()
+            return True, ""
 
     async def get_proxy_list(self):
         proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
@@ -135,26 +140,28 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
         }
 
-    def _process_line(self, line: str, random_int: int):
+    def _process_line(self, line: str, random_int: int) -> list[response.Response]:
+        responses = []
         if line.startswith("data: "):
             line = line[6:]
         if line == "[DONE]":
-            yield response.Response(
+            responses.append(response.Response(
                 id=random_int,
                 finish_reason=response.FinishReason.STOP,
                 normal_message="",
                 function_call=None
-            )
+            ))
         else:
             try:
                 chunk = ujson.loads(line)
                 if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
                     text = chunk["choices"][0]["delta"]["content"]
-                    yield response.Response(
+                    responses.append(response.Response(
                         id=random_int,
                         finish_reason=response.FinishReason.NULL,
                         normal_message=text,
                         function_call=None
-                    )
+                    ))
             except ValueError as e:
                 raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
+        return responses
