@@ -14,4 +14,5 @@ colorlog
 ujson
 hypercorn
 ftfy
+free-proxy
 git+https://github.com/Zai-Kun/reverse-engineered-chatgpt
