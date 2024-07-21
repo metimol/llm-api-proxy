@@ -19,11 +19,20 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         return "Use Deepinfra/Deepinfra-API to access official deepinfra API."
 
     def supported_models(self) -> list[str]:
-        return ['deepinfra/airoboros-70b', 'cognitivecomputations/dolphin-2.6-mixtral-8x7b', 'openchat/openchat-3.6-8b', 'mistralai/Mixtral-8x22B-Instruct-v0.1', 'google/codegemma-7b-it', 'microsoft/WizardLM-2-8x22B', 'HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1', 'databricks/dbrx-instruct', 'mistralai/Mistral-7B-Instruct-v0.3', 'meta-llama/Llama-2-70b-chat-hf', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'meta-llama/Meta-Llama-3-8B-Instruct', 'mistralai/Mixtral-8x22B-v0.1', '01-ai/Yi-34B-Chat', 'meta-llama/Llama-2-7b-chat-hf', 'nvidia/Nemotron-4-340B-Instruct', 'meta-llama/Llama-2-13b-chat-hf', 'google/gemma-1.1-7b-it', 'Qwen/Qwen2-72B-Instruct', 'microsoft/Phi-3-medium-4k-instruct', 'Sao10K/L3-70B-Euryale-v2.1', 'cognitivecomputations/dolphin-2.9.1-llama-3-70b', 'meta-llama/Meta-Llama-3-70B-Instruct', 'lizpreciatior/lzlv_70b_fp16_hf', 'microsoft/WizardLM-2-7B', 'llava-hf/llava-1.5-7b-hf', 'google/gemma-2-9b-it', 'google/gemma-2-27b-it']
-
+        return [
+            'deepinfra/airoboros-70b', 'cognitivecomputations/dolphin-2.6-mixtral-8x7b', 'openchat/openchat-3.6-8b',
+            'mistralai/Mixtral-8x22B-Instruct-v0.1', 'google/codegemma-7b-it', 'microsoft/WizardLM-2-8x22B',
+            'HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1', 'databricks/dbrx-instruct', 'mistralai/Mistral-7B-Instruct-v0.3',
+            'meta-llama/Llama-2-70b-chat-hf', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'meta-llama/Meta-Llama-3-8B-Instruct',
+            'mistralai/Mixtral-8x22B-v0.1', '01-ai/Yi-34B-Chat', 'meta-llama/Llama-2-7b-chat-hf', 'nvidia/Nemotron-4-340B-Instruct',
+            'meta-llama/Llama-2-13b-chat-hf', 'google/gemma-1.1-7b-it', 'Qwen/Qwen2-72B-Instruct', 'microsoft/Phi-3-medium-4k-instruct',
+            'Sao10K/L3-70B-Euryale-v2.1', 'cognitivecomputations/dolphin-2.9.1-llama-3-70b', 'meta-llama/Meta-Llama-3-70B-Instruct', 
+            'lizpreciatior/lzlv_70b_fp16_hf', 'microsoft/WizardLM-2-7B', 'llava-hf/llava-1.5-7b-hf', 'google/gemma-2-9b-it', 'google/gemma-2-27b-it'
+        ]
+    
     def function_call_supported(self) -> bool:
         return False
-
+    
     def stream_mode_supported(self) -> bool:
         return True    
 
@@ -83,34 +92,35 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
         }
 
-        result = await self.make_request(self.url, data, headers)
-        if isinstance(result, httpx.Response):
-            async for line in result.aiter_lines():
-                if line:
-                    if line.startswith("data: "):
-                        line = line[6:]
-                    if line == "[DONE]":
-                        yield response.Response(
-                            id=random_int,
-                            finish_reason=response.FinishReason.STOP,
-                            normal_message="",
-                            function_call=None
-                        )
-                        break
-                    try:
-                        chunk = ujson.loads(line)
-                        if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                            text = chunk["choices"][0]["delta"]["content"]
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.NULL,
-                                normal_message=text,
-                                function_call=None
-                            )
-                    except ValueError as e:
-                        raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
-        else:
-            raise Exception("Could not find a working proxy after multiple retries.")
+        async with httpx.AsyncClient() as client:
+            async with client.stream("POST", self.url, json=data, headers=headers) as result:
+                if result.status_code == 200:
+                    async for line in result.aiter_lines():
+                        if line:
+                            if line.startswith("data: "):
+                                line = line[6:]
+                            if line == "[DONE]":
+                                yield response.Response(
+                                    id=random_int,
+                                    finish_reason=response.FinishReason.STOP,
+                                    normal_message="",
+                                    function_call=None
+                                )
+                                break
+                            try:
+                                chunk = ujson.loads(line)
+                                if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                                    text = chunk["choices"][0]["delta"]["content"]
+                                    yield response.Response(
+                                        id=random_int,
+                                        finish_reason=response.FinishReason.NULL,
+                                        normal_message=text,
+                                        function_call=None
+                                    )
+                            except ValueError as e:
+                                raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
+                else:
+                    raise Exception(f"HTTP request failed with status code: {result.status_code}")
 
     async def make_request(self, url, data, headers, is_test=False):
         if self.use_proxy:
