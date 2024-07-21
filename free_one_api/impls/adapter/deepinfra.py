@@ -2,7 +2,6 @@ import typing
 import random
 import httpx
 import ujson
-from fake_useragent import UserAgent
 
 from ...models import adapter
 from ...models.adapter import llm
@@ -43,7 +42,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
-        self.ua = UserAgent()
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
@@ -81,7 +79,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         headers = {
             'X-Deepinfra-Source': 'web-page',
-            'User-Agent': self.ua.random
+            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
         }
 
         result = await self.make_request(self.url, data, headers)
@@ -111,7 +109,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     except ValueError as e:
                         raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
         else:
-            raise FreeProxyException("Could not find a working proxy after multiple retries.")
+            raise Exception("Could not find a working proxy after multiple retries.")
 
     async def make_request(self, url, data, headers, is_test=False):
         for _ in range(30):
