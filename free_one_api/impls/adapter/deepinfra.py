@@ -42,6 +42,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
+        self.use_proxy = False
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
@@ -112,19 +113,28 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             raise Exception("Could not find a working proxy after multiple retries.")
 
     async def make_request(self, url, data, headers, is_test=False):
-        for _ in range(30):
-            try:
-                proxy_address = await self.get_working_proxy()
-                async with httpx.AsyncClient(proxies=proxy_address) as client:
-                    if is_test:
-                        response = await client.post(url, json=data, headers=headers)
-                        response.raise_for_status()
-                        return True, ""
-                    else:
-                        return await client.stream("POST", url, json=data, headers=headers)
-            except (httpx.HTTPStatusError, httpx.RequestError) as e:
-                continue
-        return False, "Could not find a working proxy after multiple retries."
+        if self.use_proxy:
+            for _ in range(30):
+                try:
+                    proxy_address = await self.get_working_proxy()
+                    async with httpx.AsyncClient(proxies=proxy_address) as client:
+                        if is_test:
+                            response = await client.post(url, json=data, headers=headers)
+                            response.raise_for_status()
+                            return True, ""
+                        else:
+                            return await client.stream("POST", url, json=data, headers=headers)
+                except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                    continue
+            return False, "Could not find a working proxy after multiple retries."
+        else:
+            async with httpx.AsyncClient() as client:
+                if is_test:
+                    response = await client.post(url, json=data, headers=headers)
+                    response.raise_for_status()
+                    return True, ""
+                else:
+                    return await client.stream("POST", url, json=data, headers=headers)
 
     async def get_proxy_list(self):
         proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
