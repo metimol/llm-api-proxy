@@ -63,7 +63,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             }
             headers = {
                 'X-Deepinfra-Source': 'web-page',
-                'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
+                'User-Agent': self.ua.random
             }
             proxy_address = await self.get_working_proxy()
             async with httpx.AsyncClient(proxies=proxy_address) as client:
