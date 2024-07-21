@@ -9,7 +9,6 @@ from ...models.adapter import llm
 from ...entities import request, response
 from ...models.channel import evaluation
 
-from fp.fp import FreeProxy
 from fp.errors import FreeProxyException
 
 @adapter.llm_adapter
