@@ -132,6 +132,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 if is_test:
                     response = await client.post(url, json=data, headers=headers)
                     response.raise_for_status()
+                    print(response.text)
                     return True, ""
                 else:
                     return await client.stream("POST", url, json=data, headers=headers)
