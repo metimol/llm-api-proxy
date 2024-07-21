@@ -46,7 +46,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.eval = eval
         self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
         self.ua = UserAgent()
-        self.proxy_provider = FreeProxy()
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
