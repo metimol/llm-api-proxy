@@ -9,8 +9,6 @@ from ...models.adapter import llm
 from ...entities import request, response
 from ...models.channel import evaluation
 
-from fp.errors import FreeProxyException
-
 @adapter.llm_adapter
 class DeepinfraAdapter(llm.LLMLibAdapter):
     @classmethod
@@ -149,4 +147,4 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                         return {"http": proxy, "https": proxy}
             except (httpx.HTTPStatusError, httpx.RequestError):
                 continue
-        raise FreeProxyException("Could not find a working proxy after multiple retries.")
+        raise Exception("Could not find a working proxy after multiple retries.")
