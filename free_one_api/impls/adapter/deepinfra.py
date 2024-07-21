@@ -9,6 +9,9 @@ from ...models.adapter import llm
 from ...entities import request, response
 from ...models.channel import evaluation
 
+from fp import FreeProxy
+from fp.errors import FreeProxyException
+
 @adapter.llm_adapter
 class DeepinfraAdapter(llm.LLMLibAdapter):
     @classmethod
@@ -44,6 +47,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.eval = eval
         self.url = "https://api.deepinfra.com/v1/openai/chat/completions"
         self.ua = UserAgent()
+        self.proxy_provider = FreeProxy()
 
     async def test(self) -> typing.Union[bool, str]:
         try:
@@ -61,7 +65,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 'X-Deepinfra-Source': 'web-page',
                 'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
             }
-            async with httpx.AsyncClient() as client:
+            proxy_address = self.get_working_proxy()
+            async with httpx.AsyncClient(proxies=proxy_address) as client:
                 response = await client.post(self.url, json=data, headers=headers)
                 response.raise_for_status()
                 response_data = response.json()
@@ -91,7 +96,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': self.ua.random
         }
 
-        async with httpx.AsyncClient() as client:
+        proxy_address = self.get_working_proxy()
+        async with httpx.AsyncClient(proxies=proxy_address) as client:
             async with client.stream("POST", self.url, json=data, headers=headers) as response:
                 response.raise_for_status()
                 async for line in response.aiter_lines():
@@ -118,3 +124,13 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                                 )
                         except ValueError as e:
                             raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
+
+    def get_working_proxy(self):
+        retry_count = 30
+        for _ in range(retry_count):
+            try:
+                proxy = self.proxy_provider.get()
+                return {"http": proxy, "https": proxy}
+            except FreeProxyException:
+                continue
+        raise FreeProxyException("Could not find a working proxy after multiple retries.")
