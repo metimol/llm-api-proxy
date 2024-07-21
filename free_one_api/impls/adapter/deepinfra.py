@@ -65,7 +65,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 'X-Deepinfra-Source': 'web-page',
                 'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
             }
-            proxy_address = self.get_working_proxy()
+            proxy_address = await self.get_working_proxy()
             async with httpx.AsyncClient(proxies=proxy_address) as client:
                 response = await client.post(self.url, json=data, headers=headers)
                 response.raise_for_status()
@@ -74,7 +74,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         except Exception as e:
             return False, str(e)
 
-    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:        
+    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         messages = req.messages
         model = req.model
         random_int = random.randint(0, 1000000000)
@@ -96,41 +96,50 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': self.ua.random
         }
 
-        proxy_address = self.get_working_proxy()
-        async with httpx.AsyncClient(proxies=proxy_address) as client:
-            async with client.stream("POST", self.url, json=data, headers=headers) as response:
-                response.raise_for_status()
-                async for line in response.aiter_lines():
-                    if line:
-                        if line.startswith("data: "):
-                            line = line[6:]
-                        if line == "[DONE]":
-                            yield response.Response(
-                                id=random_int,
-                                finish_reason=response.FinishReason.STOP,
-                                normal_message="",
-                                function_call=None
-                            )
-                            break
-                        try:
-                            chunk = ujson.loads(line)
-                            if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                                text = chunk["choices"][0]["delta"]["content"]
-                                yield response.Response(
-                                    id=random_int,
-                                    finish_reason=response.FinishReason.NULL,
-                                    normal_message=text,
-                                    function_call=None
-                                )
-                        except ValueError as e:
-                            raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
-
-    def get_working_proxy(self):
-        retry_count = 30
-        for _ in range(retry_count):
+        for _ in range(30):
             try:
-                proxy = self.proxy_provider.get()
-                return {"http": proxy, "https": proxy}
-            except FreeProxyException:
+                proxy_address = await self.get_working_proxy()
+                async with httpx.AsyncClient(proxies=proxy_address) as client:
+                    async with client.stream("POST", self.url, json=data, headers=headers) as response:
+                        response.raise_for_status()
+                        async for line in response.aiter_lines():
+                            if line:
+                                if line.startswith("data: "):
+                                    line = line[6:]
+                                if line == "[DONE]":
+                                    yield response.Response(
+                                        id=random_int,
+                                        finish_reason=response.FinishReason.STOP,
+                                        normal_message="",
+                                        function_call=None
+                                    )
+                                    break
+                                try:
+                                    chunk = ujson.loads(line)
+                                    if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                                        text = chunk["choices"][0]["delta"]["content"]
+                                        yield response.Response(
+                                            id=random_int,
+                                            finish_reason=response.FinishReason.NULL,
+                                            normal_message=text,
+                                            function_call=None
+                                        )
+                                except ValueError as e:
+                                    raise ValueError(f"JSON decoding error: {e}\nLine content: {line})
+                        return
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
                 continue
         raise FreeProxyException("Could not find a working proxy after multiple retries.")
+
+    async def get_working_proxy(self):
+        for _ in range(30):
+            try:
+                proxy = self.proxy_provider.get()
+                test_url = "https://www.google.com"
+                async with httpx.AsyncClient(proxies={"http": proxy, "https": proxy}) as client:
+                    response = await client.get(test_url)
+                    if response.status_code == 200:
+                        return {"http": proxy, "https": proxy}
+            except FreeProxyException:
+                continue
+        raise FreeProxyProxy
