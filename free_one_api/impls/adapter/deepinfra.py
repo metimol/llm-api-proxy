@@ -152,7 +152,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
                         return proxy
-            except (httpx.HTTPStatusError, httpx.RequestError):
+            except:
                 continue
         
         raise Exception("Could not find a working proxy after trying all available proxies.")
