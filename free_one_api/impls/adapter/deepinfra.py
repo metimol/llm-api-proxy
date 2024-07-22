@@ -118,7 +118,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             return True, ""
 
     async def get_proxy_list(self):
-        proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
+        proxy_url = "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"
         async with httpx.AsyncClient() as client:
             response = await client.get(proxy_url)
             response.raise_for_status()
