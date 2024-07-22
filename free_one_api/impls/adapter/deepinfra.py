@@ -106,11 +106,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
     async def make_request(self, url, data, headers, is_test=False):
         print("searching proxy")
-        client_kwargs = {}
+        proxy = None
         if self.use_proxy:
-            client_kwargs['proxies'] = await self.get_working_proxy()
+            proxy = await self.get_working_proxy()
         
-        async with httpx.AsyncClient(**client_kwargs) as client:
+        async with httpx.AsyncClient(proxy=proxy) as client:
             print("started requestto deepinfra")
             response = await client.post(url, json=data, headers=headers)
             print("response: {response.text}")
@@ -136,7 +136,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         proxy = self.proxy_list[self.current_proxy_index]
         self.current_proxy_index += 1
-        return {"http": f"http://{proxy}", "https": f"http://{proxy}"}
+        return proxy
 
     async def get_working_proxy(self):
         if not self.use_proxy:
@@ -152,10 +152,9 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
             try:
                 test_url = "https://api.deepinfra.com/v1/openai/models"
-                async with httpx.AsyncClient(proxies=proxy) as client:
+                async with httpx.AsyncClient(proxy=f"http://{proxy}") as client:
                     print("created httpx client for proxy test")
                     response = await client.get(test_url, timeout=10)
-                    print(response.text)
                     if response.status_code == 200:
                         print("Request to deepinfra success")
                         return proxy
