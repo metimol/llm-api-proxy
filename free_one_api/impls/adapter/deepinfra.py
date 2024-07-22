@@ -123,6 +123,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             response = await client.get(proxy_url)
             response.raise_for_status()
             self.proxy_list = response.text.strip().split("\n")
+            print(self.proxy_list)
             random.shuffle(self.proxy_list)
         self.current_proxy_index = 0
         return self.proxy_list
