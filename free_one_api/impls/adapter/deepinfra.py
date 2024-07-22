@@ -90,11 +90,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
 
-        client_kwargs = {}
+        proxy = None
         if self.use_proxy:
-            client_kwargs['proxies'] = await self.get_working_proxy()
+            proxy = await self.get_working_proxy()
 
-        async with httpx.AsyncClient(**client_kwargs) as client:
+        async with httpx.AsyncClient(proxy=proxy) as client:
             async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
                 if result.status_code == 200:
                     async for line in result.aiter_lines():
