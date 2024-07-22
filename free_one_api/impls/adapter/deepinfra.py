@@ -59,6 +59,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.use_proxy = config.get('use_proxy', False)
         self.proxy_list = []
         self.current_proxy_index = 0
+        self.batch_size = 100
 
     async def test(self) -> typing.Union[bool, str]:
         print("test started")
@@ -122,10 +123,32 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         async with httpx.AsyncClient() as client:
             response = await client.get(proxy_url)
             response.raise_for_status()
-            self.proxy_list = [proxy.strip() for proxy in response.text.strip().split("\n")]
-            random.shuffle(self.proxy_list)
+            all_proxies = [proxy.strip() for proxy in response.text.strip().split("\n")]
+            random.shuffle(all_proxies)
+        
+        self.proxy_list = await self.check_proxies(all_proxies)
         self.current_proxy_index = 0
         return self.proxy_list
+
+    async def check_single_proxy(self, proxy):
+        test_url = "https://api.deepinfra.com/v1/openai/models"
+        try:
+            async with httpx.AsyncClient(proxy=proxy, timeout=2) as client:
+                response = await client.get(test_url)
+                if response.status_code == 200:
+                    return proxy
+        except:
+            pass
+        return None
+
+    async def check_proxies(self, proxies):
+        working_proxies = []
+        for i in range(0, len(proxies), self.batch_size):
+            batch = proxies[i:i+self.batch_size]
+            tasks = [self.check_single_proxy(proxy) for proxy in batch]
+            results = await asyncio.gather(*tasks)
+            working_proxies.extend([proxy for proxy in results if proxy])
+        return working_proxies
 
     async def get_next_proxy(self):
         if not self.use_proxy:
@@ -133,6 +156,9 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         if not self.proxy_list or self.current_proxy_index >= len(self.proxy_list):
             await self.get_proxy_list()
+
+        if not self.proxy_list:
+            raise Exception("No working proxies available.")
 
         proxy = self.proxy_list[self.current_proxy_index]
         self.current_proxy_index += 1
@@ -142,25 +168,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         if not self.use_proxy:
             return None
 
-        proxies_tried = set()
-        while len(proxies_tried) < len(self.proxy_list) or not self.proxy_list:
-            proxy = await self.get_next_proxy()
-            proxy_str = str(proxy)
-            if proxy_str in proxies_tried:
-                continue
-            proxies_tried.add(proxy_str)
-
-            try:
-                test_url = "https://api.deepinfra.com/v1/openai/models"
-                async with httpx.AsyncClient(proxy=proxy) as client:
-                    response = await client.get(test_url, timeout=2)
-                    if response.status_code == 200:
-                        print("Models list got.")
-                        return proxy
-            except:
-                continue
-        
-        raise Exception("Could not find a working proxy after trying all available proxies.")
+        return await self.get_next_proxy()
 
     def _get_headers(self):
         return {
