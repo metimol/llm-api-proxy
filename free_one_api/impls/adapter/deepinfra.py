@@ -109,7 +109,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         client_kwargs = {}
         if self.use_proxy:
             client_kwargs['proxies'] = await self.get_working_proxy()
-        print("Proxy founded: {client_kwargs['proxies']}")
         
         async with httpx.AsyncClient(**client_kwargs) as client:
             response = await client.post(url, json=data, headers=headers)
@@ -123,7 +122,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             response = await client.get(proxy_url)
             response.raise_for_status()
             self.proxy_list = [proxy.strip() for proxy in response.text.strip().split("\n")]
-            print(self.proxy_list)
             random.shuffle(self.proxy_list)
         self.current_proxy_index = 0
         return self.proxy_list
