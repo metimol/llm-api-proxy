@@ -122,7 +122,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         async with httpx.AsyncClient() as client:
             response = await client.get(proxy_url)
             response.raise_for_status()
-            self.proxy_list = response.text.strip().split("\n")
+            self.proxy_list = [proxy.strip() for proxy in response.text.strip().split("\n")]
             print(self.proxy_list)
             random.shuffle(self.proxy_list)
         self.current_proxy_index = 0
