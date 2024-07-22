@@ -103,16 +103,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 else:
                     raise Exception(f"HTTP request failed with status code: {result.status_code}")
 
-    async def make_request(self, url, data, headers, is_test=False):
-        client_kwargs = {}
-        if self.use_proxy:
-            client_kwargs['proxies'] = await self.get_working_proxy()
-        
-        async with httpx.AsyncClient(**client_kwargs) as client:
-            response = await client.post(url, json=data, headers=headers)
-            response.raise_for_status()
-            return True, ""
-
     async def get_proxy_list(self):
         proxy_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all"
         async with httpx.AsyncClient() as client:
@@ -140,22 +130,45 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         proxies_tried = set()
         while len(proxies_tried) < len(self.proxy_list) or not self.proxy_list:
-            proxy = await self.get_next_proxy()
-            proxy_str = str(proxy)
-            if proxy_str in proxies_tried:
-                continue
-            proxies_tried.add(proxy_str)
-
             try:
+                proxy = await self.get_next_proxy()
+                proxy_str = str(proxy)
+                if proxy_str in proxies_tried:
+                    continue
+                proxies_tried.add(proxy_str)
+
                 test_url = "https://api.deepinfra.com/v1/openai/models"
                 async with httpx.AsyncClient(proxies=proxy) as client:
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
                         return proxy
-            except (httpx.HTTPStatusError, httpx.RequestError):
+            except Exception as e:
+                logging.error(f"Error testing proxy {proxy}: {str(e)}")
                 continue
         
-        raise Exception("Could not find a working proxy after trying all available proxies.")
+        logging.error("Could not find a working proxy after trying all available proxies.")
+        return None
+
+    async def make_request(self, url, data, headers, is_test=False):
+        client_kwargs = {}
+        if self.use_proxy:
+            try:
+                client_kwargs['proxies'] = await self.get_working_proxy()
+                if client_kwargs['proxies'] is None:
+                    logging.error("No working proxy found. Proceeding without proxy.")
+            except Exception as e:
+                logging.error(f"Error getting working proxy: {str(e)}")
+                client_kwargs['proxies'] = None
+
+        try:
+            async with httpx.AsyncClient(**client_kwargs) as client:
+                response = await client.post(url, json=data, headers=headers)
+                response.raise_for_status()
+                return True, ""
+        except Exception as e:
+            error_msg = f"Error making request: {str(e)}"
+            logging.error(error_msg)
+            return False, error_msg
 
     def _get_headers(self):
         return {
