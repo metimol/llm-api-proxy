@@ -57,6 +57,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
+        self.proxy_list = []
+        self.current_proxy_index = 0
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
@@ -116,23 +118,44 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         async with httpx.AsyncClient() as client:
             response = await client.get(proxy_url)
             response.raise_for_status()
-            return response.text.strip().split("\n")
+            self.proxy_list = response.text.strip().split("\n")
+            random.shuffle(self.proxy_list)  # Перемешиваем список для разнообразия
+        self.current_proxy_index = 0
+        return self.proxy_list
+
+    async def get_next_proxy(self):
+        if not self.use_proxy:
+            return None
+
+        if not self.proxy_list or self.current_proxy_index >= len(self.proxy_list):
+            await self.get_proxy_list()
+
+        proxy = self.proxy_list[self.current_proxy_index]
+        self.current_proxy_index += 1
+        return {"http": proxy, "https": proxy}
 
     async def get_working_proxy(self):
         if not self.use_proxy:
             return None
-        
-        proxy_list = await self.get_proxy_list()
-        for proxy in proxy_list:
+
+        proxies_tried = set()
+        while len(proxies_tried) < len(self.proxy_list) or not self.proxy_list:
+            proxy = await self.get_next_proxy()
+            proxy_str = str(proxy)
+            if proxy_str in proxies_tried:
+                continue
+            proxies_tried.add(proxy_str)
+
             try:
                 test_url = "https://api.deepinfra.com/v1/openai/models"
-                async with httpx.AsyncClient(proxies={"http": proxy, "https": proxy}) as client:
+                async with httpx.AsyncClient(proxies=proxy) as client:
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
-                        return {"http": proxy, "https": proxy}
+                        return proxy
             except (httpx.HTTPStatusError, httpx.RequestError):
                 continue
-        raise Exception("Could not find a working proxy after multiple retries.")
+        
+        raise Exception("Could not find a working proxy after trying all available proxies.")
 
     def _get_headers(self):
         return {
