@@ -3,6 +3,7 @@ import random
 import httpx
 import ujson
 import asyncio
+import time
 from ...models import adapter
 from ...models.adapter import llm
 from ...entities import request, response
@@ -60,6 +61,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.use_proxy = config.get('use_proxy', False)
         self.proxy_list = asyncio.Queue()
         self.proxy_semaphore = asyncio.Semaphore(10)
+        self.last_update = time.time()
+        self.update_interval = 20 * 60  # 20 minutes in seconds
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
@@ -69,7 +72,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "max_tokens": 15000,
         }
         headers = self._get_headers()
-        
+
         max_attempts = 30
         for attempt in range(max_attempts):
             try:
@@ -126,6 +129,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             random.shuffle(all_proxies)
 
         await self.check_proxies(all_proxies)
+        self.last_update = time.time()
 
     async def check_single_proxy(self, proxy):
         test_url = "https://api.deepinfra.com/v1/openai/models"
@@ -142,7 +146,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         await asyncio.gather(*tasks)
 
     async def get_working_proxy(self):
-        if self.proxy_list.empty():
+        if self.proxy_list.empty() or time.time() - self.last_update > self.update_interval:
             await self.get_proxy_list()
 
         async with self.proxy_semaphore:
