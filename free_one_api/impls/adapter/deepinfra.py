@@ -59,7 +59,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
         self.proxy_list = asyncio.Queue()
-        self.proxy_semaphore = asyncio.Semaphore(10)  # Ограничение одновременных запросов к прокси
+        self.proxy_semaphore = asyncio.Semaphore(10)
 
     async def test(self) -> typing.Union[bool, str]:
         data = {
