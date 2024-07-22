@@ -58,21 +58,15 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
-        self.proxy_list = []
-        self.current_proxy_index = 0
-        self.batch_size = 100
+        self.proxy_list = asyncio.Queue()
+        self.proxy_semaphore = asyncio.Semaphore(10)  # Ограничение одновременных запросов к прокси
 
     async def test(self) -> typing.Union[bool, str]:
-        print("test started")
         data = {
             "model": "meta-llama/Meta-Llama-3-70B-Instruct",
             "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             "temperature": 0.7,
             "max_tokens": 15000,
-            "top_p": 0.9,
-            "top_k": 0.0,
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
         }
         headers = self._get_headers()
         return await self.make_request(self.BASE_URL, data, headers, is_test=True)
@@ -84,17 +78,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "stream": True,
             "temperature": 0.7,
             "max_tokens": 15000,
-            "top_p": 0.9,
-            "top_k": 0.0,
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
         }
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
 
-        proxy = None
-        if self.use_proxy:
-            proxy = await self.get_working_proxy()
+        proxy = await self.get_working_proxy() if self.use_proxy else None
 
         async with httpx.AsyncClient(proxy=proxy) as client:
             async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
@@ -107,15 +95,10 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     raise Exception(f"HTTP request failed with status code: {result.status_code}")
 
     async def make_request(self, url, data, headers, is_test=False):
-        print("searching proxy")
-        proxy = None
-        if self.use_proxy:
-            proxy = await self.get_working_proxy()
-        
+        proxy = await self.get_working_proxy() if self.use_proxy else None
+
         async with httpx.AsyncClient(proxy=proxy) as client:
-            print("started request to deepinfra")
             response = await client.post(url, json=data, headers=headers)
-            print(f"response: {response.text}")
             response.raise_for_status()
             return True, ""
 
@@ -126,10 +109,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             response.raise_for_status()
             all_proxies = [proxy.strip() for proxy in response.text.strip().split("\n")]
             random.shuffle(all_proxies)
-        
-        self.proxy_list = await self.check_proxies(all_proxies)
-        self.current_proxy_index = 0
-        return self.proxy_list
+
+        await self.check_proxies(all_proxies)
 
     async def check_single_proxy(self, proxy):
         test_url = "https://api.deepinfra.com/v1/openai/models"
@@ -137,39 +118,20 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             async with httpx.AsyncClient(proxy=proxy, timeout=2) as client:
                 response = await client.get(test_url)
                 if response.status_code == 200:
-                    return proxy
+                    await self.proxy_list.put(proxy)
         except:
             pass
-        return None
 
     async def check_proxies(self, proxies):
-        working_proxies = []
-        for i in range(0, len(proxies), self.batch_size):
-            batch = proxies[i:i+self.batch_size]
-            tasks = [self.check_single_proxy(proxy) for proxy in batch]
-            results = await asyncio.gather(*tasks)
-            working_proxies.extend([proxy for proxy in results if proxy])
-        return working_proxies
-
-    async def get_next_proxy(self):
-        if not self.use_proxy:
-            return None
-
-        if not self.proxy_list or self.current_proxy_index >= len(self.proxy_list):
-            await self.get_proxy_list()
-
-        if not self.proxy_list:
-            raise Exception("No working proxies available.")
-
-        proxy = self.proxy_list[self.current_proxy_index]
-        self.current_proxy_index += 1
-        return proxy
+        tasks = [self.check_single_proxy(proxy) for proxy in proxies]
+        await asyncio.gather(*tasks)
 
     async def get_working_proxy(self):
-        if not self.use_proxy:
-            return None
-
-        return await self.get_next_proxy()
+        if self.proxy_list.empty():
+            await self.get_proxy_list()
+        
+        async with self.proxy_semaphore:
+            return await self.proxy_list.get()
 
     def _get_headers(self):
         return {
