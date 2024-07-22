@@ -61,6 +61,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.current_proxy_index = 0
 
     async def test(self) -> typing.Union[bool, str]:
+        print("test started")
         data = {
             "model": "meta-llama/Meta-Llama-3-70B-Instruct",
             "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
@@ -104,6 +105,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                     raise Exception(f"HTTP request failed with status code: {result.status_code}")
 
     async def make_request(self, url, data, headers, is_test=False):
+        print("searching proxy")
         client_kwargs = {}
         if self.use_proxy:
             client_kwargs['proxies'] = await self.get_working_proxy()
