@@ -69,7 +69,15 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "max_tokens": 15000,
         }
         headers = self._get_headers()
-        return await self.make_request(self.BASE_URL, data, headers, is_test=True)
+        
+        max_attempts = 30
+        for attempt in range(max_attempts):
+            try:
+                result = await self.make_request(self.BASE_URL, data, headers, is_test=True)
+                return result
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    return False, f"Failed after {max_attempts} attempts. Last error: {str(e)}"
 
     async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
         data = {
@@ -82,17 +90,24 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
 
-        proxy = await self.get_working_proxy() if self.use_proxy else None
+        max_attempts = 30
+        for attempt in range(max_attempts):
+            try:
+                proxy = await self.get_working_proxy() if self.use_proxy else None
 
-        async with httpx.AsyncClient(proxy=proxy) as client:
-            async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
-                if result.status_code == 200:
-                    async for line in result.aiter_lines():
-                        if line:
-                            for response_item in self._process_line(line, random_int):
-                                yield response_item
-                else:
-                    raise Exception(f"HTTP request failed with status code: {result.status_code}")
+                async with httpx.AsyncClient(proxy=proxy) as client:
+                    async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
+                        if result.status_code == 200:
+                            async for line in result.aiter_lines():
+                                if line:
+                                    for response_item in self._process_line(line, random_int):
+                                        yield response_item
+                            return
+                        else:
+                            raise Exception(f"HTTP request failed with status code: {result.status_code}")
+            except Exception as e:
+                if attempt == max_attempts - 1:
+                    raise Exception(f"Failed after {max_attempts} attempts. Last error: {str(e)}")
 
     async def make_request(self, url, data, headers, is_test=False):
         proxy = await self.get_working_proxy() if self.use_proxy else None
@@ -129,7 +144,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     async def get_working_proxy(self):
         if self.proxy_list.empty():
             await self.get_proxy_list()
-        
+
         async with self.proxy_semaphore:
             return await self.proxy_list.get()
 
