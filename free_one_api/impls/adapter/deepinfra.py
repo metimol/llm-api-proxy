@@ -135,8 +135,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         proxy = self.proxy_list[self.current_proxy_index]
         self.current_proxy_index += 1
-        print({"http": proxy, "https": proxy})
-        return {"http": proxy, "https": proxy}
+        return {"http": f"http://{proxy}", "https": f"http://{proxy}"}
 
     async def get_working_proxy(self):
         if not self.use_proxy:
