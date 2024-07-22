@@ -135,6 +135,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
         proxy = self.proxy_list[self.current_proxy_index]
         self.current_proxy_index += 1
+        print({"http": proxy, "https": proxy})
         return {"http": proxy, "https": proxy}
 
     async def get_working_proxy(self):
@@ -154,7 +155,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 async with httpx.AsyncClient(proxies=proxy) as client:
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
-                        print(proxy)
+                        print("Request to deepinfra success")
                         return proxy
             except:
                 continue
