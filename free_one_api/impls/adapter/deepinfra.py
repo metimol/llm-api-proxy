@@ -118,7 +118,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             return True, ""
 
     async def get_proxy_list(self):
-        proxy_url = "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"
+        proxy_url = "https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&protocol=http&proxy_format=protocolipport&format=text&timeout=20000"
         async with httpx.AsyncClient() as client:
             response = await client.get(proxy_url)
             response.raise_for_status()
@@ -152,7 +152,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
             try:
                 test_url = "https://api.deepinfra.com/v1/openai/models"
-                async with httpx.AsyncClient(proxy=f"http://{proxy}") as client:
+                async with httpx.AsyncClient(proxy=proxy) as client:
                     response = await client.get(test_url, timeout=2)
                     if response.status_code == 200:
                         print("Models list got.")
