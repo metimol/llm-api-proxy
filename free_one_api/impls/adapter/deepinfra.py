@@ -109,9 +109,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         client_kwargs = {}
         if self.use_proxy:
             client_kwargs['proxies'] = await self.get_working_proxy()
+        print("Proxy founded: {client_kwargs['proxies']}")
         
         async with httpx.AsyncClient(**client_kwargs) as client:
             response = await client.post(url, json=data, headers=headers)
+            print("response: {response.text}")
             response.raise_for_status()
             return True, ""
 
