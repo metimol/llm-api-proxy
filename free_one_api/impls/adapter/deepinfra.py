@@ -144,6 +144,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         proxies_tried = set()
         while len(proxies_tried) < len(self.proxy_list) or not self.proxy_list:
             proxy = await self.get_next_proxy()
+            print(proxy)
             proxy_str = str(proxy)
             if proxy_str in proxies_tried:
                 continue
