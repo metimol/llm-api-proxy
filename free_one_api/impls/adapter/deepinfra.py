@@ -2,6 +2,7 @@ import typing
 import random
 import httpx
 import ujson
+import asyncio
 from ...models import adapter
 from ...models.adapter import llm
 from ...entities import request, response
