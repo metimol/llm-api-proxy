@@ -154,6 +154,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                 async with httpx.AsyncClient(proxies=proxy) as client:
                     response = await client.get(test_url, timeout=10)
                     if response.status_code == 200:
+                        print(proxy)
                         return proxy
             except:
                 continue
