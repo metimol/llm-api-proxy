@@ -28,43 +28,28 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     BASE_URL = "https://api.deepinfra.com/v1/openai/chat/completions"
 
     @classmethod
-    def name(cls) -> str:
-        return cls.NAME
-
+    def name(cls): return cls.NAME
     @classmethod
-    def description(cls) -> str:
-        return cls.DESCRIPTION
-
-    def supported_models(self) -> list[str]:
-        return self.SUPPORTED_MODELS
-
-    def function_call_supported(self) -> bool:
-        return False
-
-    def stream_mode_supported(self) -> bool:
-        return True    
-
-    def multi_round_supported(self) -> bool:
-        return True
-
+    def description(cls): return cls.DESCRIPTION
+    def supported_models(self): return self.SUPPORTED_MODELS
+    def function_call_supported(self): return False
+    def stream_mode_supported(self): return True    
+    def multi_round_supported(self): return True
     @classmethod
-    def config_comment(cls) -> str:
-        return cls.CONFIG_COMMENT
-
+    def config_comment(cls): return cls.CONFIG_COMMENT
     @classmethod
-    def supported_path(cls) -> str:
-        return cls.SUPPORTED_PATH
+    def supported_path(cls): return cls.SUPPORTED_PATH
 
     def __init__(self, config: dict, eval: evaluation.AbsChannelEvaluation):
         self.config = config
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
         self.proxy_list = asyncio.Queue()
-        self.proxy_semaphore = asyncio.Semaphore(10)
-        self.last_update = time.time()
-        self.update_interval = 20 * 60  # 20 minutes in seconds
+        self.proxy_semaphore = asyncio.Semaphore(50)
+        self.last_update = 0
+        self.update_interval = 15 * 60
 
-    async def test(self) -> typing.Union[bool, str]:
+    async def test(self):
         data = {
             "model": "meta-llama/Meta-Llama-3-70B-Instruct",
             "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
@@ -73,16 +58,14 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         }
         headers = self._get_headers()
 
-        max_attempts = 30
-        for attempt in range(max_attempts):
+        for _ in range(30):
             try:
-                result = await self.make_request(self.BASE_URL, data, headers, is_test=True)
-                return result
+                return await self.make_request(self.BASE_URL, data, headers, is_test=True)
             except Exception as e:
-                if attempt == max_attempts - 1:
-                    return False, f"Failed after {max_attempts} attempts. Last error: {str(e)}"
+                pass
+        return False, "Failed after 30 attempts."
 
-    async def query(self, req: request.Request) -> typing.AsyncGenerator[response.Response, None]:
+    async def query(self, req: request.Request):
         data = {
             "messages": req.messages,
             "model": req.model,
@@ -93,28 +76,23 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
 
-        max_attempts = 30
-        for attempt in range(max_attempts):
+        for _ in range(30):
             try:
                 proxy = await self.get_working_proxy() if self.use_proxy else None
-
                 async with httpx.AsyncClient(proxy=proxy) as client:
                     async with client.stream("POST", self.BASE_URL, json=data, headers=headers) as result:
                         if result.status_code == 200:
                             async for line in result.aiter_lines():
                                 if line:
-                                    for response_item in self._process_line(line, random_int):
-                                        yield response_item
+                                    yield from self._process_line(line, random_int)
                             return
-                        else:
-                            raise Exception(f"HTTP request failed with status code: {result.status_code}")
-            except Exception as e:
-                if attempt == max_attempts - 1:
-                    raise Exception(f"Failed after {max_attempts} attempts. Last error: {str(e)}")
+                        raise Exception(f"HTTP request failed with status code: {result.status_code}")
+            except Exception:
+                pass
+        raise Exception("Failed after 30 attempts.")
 
     async def make_request(self, url, data, headers, is_test=False):
         proxy = await self.get_working_proxy() if self.use_proxy else None
-
         async with httpx.AsyncClient(proxy=proxy) as client:
             response = await client.post(url, json=data, headers=headers)
             response.raise_for_status()
@@ -128,27 +106,21 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             all_proxies = [proxy.strip() for proxy in response.text.strip().split("\n")]
             random.shuffle(all_proxies)
 
-        await self.check_proxies(all_proxies)
+        await asyncio.gather(*[self.check_single_proxy(proxy) for proxy in all_proxies])
         self.last_update = time.time()
 
     async def check_single_proxy(self, proxy):
-        test_url = "https://api.deepinfra.com/v1/openai/models"
         try:
-            async with httpx.AsyncClient(proxy=proxy, timeout=2) as client:
-                response = await client.get(test_url)
+            async with httpx.AsyncClient(proxy=proxy, timeout=1) as client:
+                response = await client.get("https://api.deepinfra.com/v1/openai/models")
                 if response.status_code == 200:
                     await self.proxy_list.put(proxy)
         except:
             pass
 
-    async def check_proxies(self, proxies):
-        tasks = [self.check_single_proxy(proxy) for proxy in proxies]
-        await asyncio.gather(*tasks)
-
     async def get_working_proxy(self):
         if self.proxy_list.empty() or time.time() - self.last_update > self.update_interval:
             await self.get_proxy_list()
-
         async with self.proxy_semaphore:
             return await self.proxy_list.get()
 
@@ -158,28 +130,25 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
         }
 
-    def _process_line(self, line: str, random_int: int) -> list[response.Response]:
-        responses = []
+    def _process_line(self, line: str, random_int: int):
         if line.startswith("data: "):
             line = line[6:]
         if line == "[DONE]":
-            responses.append(response.Response(
+            yield response.Response(
                 id=random_int,
                 finish_reason=response.FinishReason.STOP,
                 normal_message="",
                 function_call=None
-            ))
+            )
         else:
             try:
                 chunk = ujson.loads(line)
                 if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                    text = chunk["choices"][0]["delta"]["content"]
-                    responses.append(response.Response(
+                    yield response.Response(
                         id=random_int,
                         finish_reason=response.FinishReason.NULL,
-                        normal_message=text,
+                        normal_message=chunk["choices"][0]["delta"]["content"],
                         function_call=None
-                    ))
-            except ValueError as e:
-                raise ValueError(f"JSON decoding error: {e}\nLine content: {line}")
-        return responses
+                    )
+            except ValueError:
+                pass
