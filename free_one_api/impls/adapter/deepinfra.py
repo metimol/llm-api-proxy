@@ -84,7 +84,8 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
                         if result.status_code == 200:
                             async for line in result.aiter_lines():
                                 if line:
-                                    yield from self._process_line(line, random_int)
+                                    for response_item in self._process_line(line, random_int):
+                                        yield response_item
                             return
                         raise Exception(f"HTTP request failed with status code: {result.status_code}")
             except Exception:
@@ -111,7 +112,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
 
     async def check_single_proxy(self, proxy):
         try:
-            async with httpx.AsyncClient(proxy=proxy, timeout=1) as client:
+            async with httpx.AsyncClient(proxy=proxy, timeout=2) as client:
                 response = await client.get("https://api.deepinfra.com/v1/openai/models")
                 if response.status_code == 200:
                     await self.proxy_list.put(proxy)
@@ -134,21 +135,22 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         if line.startswith("data: "):
             line = line[6:]
         if line == "[DONE]":
-            yield response.Response(
+            return [response.Response(
                 id=random_int,
                 finish_reason=response.FinishReason.STOP,
                 normal_message="",
                 function_call=None
-            )
+            )]
         else:
             try:
                 chunk = ujson.loads(line)
                 if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
-                    yield response.Response(
+                    return [response.Response(
                         id=random_int,
                         finish_reason=response.FinishReason.NULL,
                         normal_message=chunk["choices"][0]["delta"]["content"],
                         function_call=None
-                    )
+                    )]
             except ValueError:
                 pass
+        return []
