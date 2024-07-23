@@ -45,7 +45,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
         self.proxy_list = asyncio.Queue()
-        self.proxy_semaphore = asyncio.Semaphore(50)
+        self.proxy_semaphore = asyncio.Semaphore(100)
         self.last_update = 0
         self.update_interval = 15 * 60
 
