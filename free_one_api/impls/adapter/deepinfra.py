@@ -13,16 +13,7 @@ from ...models.channel import evaluation
 class DeepinfraAdapter(llm.LLMLibAdapter):
     NAME = "Deepinfra/Deepinfra-API"
     DESCRIPTION = "Use Deepinfra/Deepinfra-API to access official deepinfra API."
-    SUPPORTED_MODELS = [
-        'deepinfra/airoboros-70b', 'cognitivecomputations/dolphin-2.6-mixtral-8x7b', 'openchat/openchat-3.6-8b',
-        'mistralai/Mixtral-8x22B-Instruct-v0.1', 'google/codegemma-7b-it', 'microsoft/WizardLM-2-8x22B',
-        'HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1', 'databricks/dbrx-instruct', 'mistralai/Mistral-7B-Instruct-v0.3',
-        'meta-llama/Llama-2-70b-chat-hf', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'meta-llama/Meta-Llama-3-8B-Instruct',
-        'mistralai/Mixtral-8x22B-v0.1', '01-ai/Yi-34B-Chat', 'meta-llama/Llama-2-7b-chat-hf', 'nvidia/Nemotron-4-340B-Instruct',
-        'meta-llama/Llama-2-13b-chat-hf', 'google/gemma-1.1-7b-it', 'Qwen/Qwen2-72B-Instruct', 'microsoft/Phi-3-medium-4k-instruct',
-        'Sao10K/L3-70B-Euryale-v2.1', 'cognitivecomputations/dolphin-2.9.1-llama-3-70b', 'meta-llama/Meta-Llama-3-70B-Instruct', 
-        'lizpreciatior/lzlv_70b_fp16_hf', 'microsoft/WizardLM-2-7B', 'llava-hf/llava-1.5-7b-hf', 'google/gemma-2-9b-it', 'google/gemma-2-27b-it'
-    ]
+    SUPPORTED_MODELS = ['microsoft/WizardLM-2-7B', 'meta-llama/Meta-Llama-3-8B-Instruct', 'meta-llama/Llama-2-7b-chat-hf', 'Qwen/Qwen2-72B-Instruct', 'mistralai/Mixtral-8x22B-v0.1', 'google/codegemma-7b-it', '01-ai/Yi-34B-Chat', 'meta-llama/Meta-Llama-3.1-405B-Instruct', 'meta-llama/Llama-2-13b-chat-hf', 'meta-llama/Meta-Llama-3-70B-Instruct', 'meta-llama/Meta-Llama-3.1-8B-Instruct', 'meta-llama/Llama-2-70b-chat-hf', 'HuggingFaceH4/zephyr-orpo-141b-A35b-v0.1', 'cognitivecomputations/dolphin-2.9.1-llama-3-70b', 'openchat/openchat-3.6-8b', 'mistralai/Mixtral-8x22B-Instruct-v0.1', 'google/gemma-1.1-7b-it', 'databricks/dbrx-instruct', 'lizpreciatior/lzlv_70b_fp16_hf', 'meta-llama/Meta-Llama-3.1-70B-Instruct', 'Sao10K/L3-70B-Euryale-v2.1', 'cognitivecomputations/dolphin-2.6-mixtral-8x7b', 'microsoft/WizardLM-2-8x22B', 'deepinfra/airoboros-70b', 'microsoft/Phi-3-medium-4k-instruct', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'mistralai/Mistral-7B-Instruct-v0.3', 'google/gemma-2-27b-it', 'llava-hf/llava-1.5-7b-hf', 'google/gemma-2-9b-it']
     CONFIG_COMMENT = "For this website you don't need any key"
     SUPPORTED_PATH = "/v1/chat/completions"
     BASE_URL = "https://api.deepinfra.com/v1/openai/chat/completions"
