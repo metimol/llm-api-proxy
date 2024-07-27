@@ -104,7 +104,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             response = await client.post(self.PROXY_API_URL, headers=headers)
             response.raise_for_status()
             data = response.json()
-            print(data)
             self.proxy_list = data.get("working_proxies", [])
         self.last_update = time.time()
 
