@@ -17,17 +17,26 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
     CONFIG_COMMENT = "For this website you don't need any key"
     SUPPORTED_PATH = "/v1/chat/completions"
     BASE_URL = "https://api.deepinfra.com/v1/openai/chat/completions"
+    PROXY_API_URL = "https://api-proxy-checker.5rgr39.easypanel.host/check_proxies"
+    PROXY_API_KEY = "patison2005"
 
     @classmethod
     def name(cls): return cls.NAME
+
     @classmethod
     def description(cls): return cls.DESCRIPTION
+
     def supported_models(self): return self.SUPPORTED_MODELS
+
     def function_call_supported(self): return False
+
     def stream_mode_supported(self): return True    
+
     def multi_round_supported(self): return True
+
     @classmethod
     def config_comment(cls): return cls.CONFIG_COMMENT
+
     @classmethod
     def supported_path(cls): return cls.SUPPORTED_PATH
 
@@ -35,8 +44,7 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         self.config = config
         self.eval = eval
         self.use_proxy = config.get('use_proxy', False)
-        self.proxy_list = asyncio.Queue()
-        self.proxy_semaphore = asyncio.Semaphore(100)
+        self.proxy_list = []
         self.last_update = 0
         self.update_interval = 15 * 60
 
@@ -48,7 +56,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             "max_tokens": 15000,
         }
         headers = self._get_headers()
-
         for _ in range(30):
             try:
                 return await self.make_request(self.BASE_URL, data, headers, is_test=True)
@@ -66,7 +73,6 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         }
         headers = self._get_headers()
         random_int = random.randint(0, 1000000000)
-
         for _ in range(30):
             try:
                 proxy = await self.get_working_proxy() if self.use_proxy else None
@@ -91,30 +97,24 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
             return True, ""
 
     async def get_proxy_list(self):
-        proxy_url = "https://api.proxyscrape.com/v3/free-proxy-list/get?request=displayproxies&protocol=http&proxy_format=protocolipport&format=text&anonymity=Elite,Anonymous&timeout=5015"
+        headers = {
+            "Authorization": f"Bearer {self.PROXY_API_KEY}"
+        }
         async with httpx.AsyncClient() as client:
-            response = await client.get(proxy_url)
+            response = await client.post(self.PROXY_API_URL, headers=headers)
             response.raise_for_status()
-            all_proxies = [proxy.strip() for proxy in response.text.strip().split("\n")]
-            random.shuffle(all_proxies)
-
-        await asyncio.gather(*[self.check_single_proxy(proxy) for proxy in all_proxies])
+            data = response.json()
+            self.proxy_list = data.get("working_proxies", [])
         self.last_update = time.time()
 
-    async def check_single_proxy(self, proxy):
-        try:
-            async with httpx.AsyncClient(proxy=proxy, timeout=2) as client:
-                response = await client.get("https://api.deepinfra.com/v1/openai/models")
-                if response.status_code == 200:
-                    await self.proxy_list.put(proxy)
-        except:
-            pass
-
     async def get_working_proxy(self):
-        if self.proxy_list.empty() or time.time() - self.last_update > self.update_interval:
+        if not self.proxy_list or time.time() - self.last_update > self.update_interval:
             await self.get_proxy_list()
-        async with self.proxy_semaphore:
-            return await self.proxy_list.get()
+        
+        if not self.proxy_list:
+            raise Exception("No working proxies available")
+        
+        return random.choice(self.proxy_list)
 
     def _get_headers(self):
         return {
