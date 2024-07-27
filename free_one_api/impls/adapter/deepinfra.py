@@ -100,10 +100,11 @@ class DeepinfraAdapter(llm.LLMLibAdapter):
         headers = {
             "Authorization": f"Bearer {self.PROXY_API_KEY}"
         }
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=None) as client:
             response = await client.post(self.PROXY_API_URL, headers=headers)
             response.raise_for_status()
             data = response.json()
+            print(data)
             self.proxy_list = data.get("working_proxies", [])
         self.last_update = time.time()
 
