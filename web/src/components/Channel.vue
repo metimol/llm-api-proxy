@@ -1,374 +1,331 @@
 <script setup>
-
-import { ref, reactive } from 'vue';
-
-// axios
+import { ref, reactive, computed, onMounted } from 'vue';
 import axios from 'axios';
-import { onMounted, computed } from 'vue';
-import {
-    Delete,
-    Refresh,
-    DocumentAdd,
-    Timer
-} from '@element-plus/icons-vue'
-import { ElNotification } from 'element-plus'
+import { ElNotification, ElMessageBox } from 'element-plus';
+import { Delete, Refresh, DocumentAdd, Timer, Edit, Search, Download } from '@element-plus/icons-vue';
 
 const channelList = ref([]);
-
 const loading = ref(false);
 const scheduling = ref(false);
+const searchQuery = ref('');
+const selectedChannels = ref([]);
+const sortBy = ref('id');
+const sortOrder = ref('asc');
+
+const detailsDialogVisible = ref(false);
+const showingChannelIndex = ref(-1);
+const showingChannelData = reactive({
+    details: {
+        id: "0",
+        name: "",
+        adapter: {
+            type: "Deepinfra/Deepinfra-API",
+            config: "{}"
+        },
+        model_mapping: "{}",
+        enabled: true,
+        latency: -1
+    }
+});
+
+const usableAdapterList = ref([]);
+const usableAdapterMap = ref({});
+
+const filteredChannels = computed(() => {
+    return channelList.value
+        .filter(channel => 
+            channel.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            channel.adapter.toLowerCase().includes(searchQuery.value.toLowerCase())
+        )
+        .sort((a, b) => {
+            const modifier = sortOrder.value === 'asc' ? 1 : -1;
+            if (a[sortBy.value] < b[sortBy.value]) return -1 * modifier;
+            if (a[sortBy.value] > b[sortBy.value]) return 1 * modifier;
+            return 0;
+        });
+});
 
 function refreshChannelList() {
     loading.value = true;
     axios.get('/api/channel/list')
         .then(res => {
             loading.value = false;
-            console.log(res);
             if (res.data.code != 0) {
                 ElNotification({
                     message: 'Failed: ' + res.data.message,
                     type: 'error'
-                })
+                });
                 return;
-            }else{
-                var copy = res.data.data;
-                for (let i = 0; i < copy.length; i++) {
-                    copy[i].loading = false;
-                }
-                channelList.value = copy;
-                ElNotification({
-                    message: 'Successfully refreshed channel list.',
-                    type: 'success',
-                    duration: 1800
-                })
             }
+            channelList.value = res.data.data.map(channel => ({...channel, loading: false}));
+            ElNotification({
+                message: 'Successfully refreshed channel list.',
+                type: 'success',
+                duration: 1800
+            });
         })
         .catch(err => {
             loading.value = false;
-            console.log(err);
+            console.error(err);
             ElNotification({
                 message: 'Failed to refresh channel list.',
                 type: 'error'
-            })
-        })
-}
-
-function recalcChannelContainerWidth() {
-    channelContainerWidth.value = document.documentElement.clientWidth > 1000 ? '1000px' : document.documentElement.clientWidth + 'px';
-
-    console.log(channelContainerWidth.value);
-}
-
-onMounted(() => {
-    refreshChannelList();
-    recalcChannelContainerWidth();
-    getUsableAdapterList();
-});
-
-const channelContainerWidth = ref('1000px');
-
-onresize = () => {
-    recalcChannelContainerWidth();
-}
-
-const adapter_color = {
-    "Deepinfra/Deepinfra-API": "#AACAFF",
-    "xtekky/gpt4free": "#CC33FF",
-    "Soulter/hugging-chat-api": "#FFBB03",
-    "Openai/GPT": "#00CC90",
-    "NextChat/GPT": "#FFA500"
+            });
+        });
 }
 
 function deleteChannelConfirmed(channel_id) {
-    console.log(channel_id);
-    axios.delete('/api/channel/delete/' + channel_id)
-        .then(res => {
-            console.log(res);
-            if (res.data.code == 0) {
-                ElNotification({
-                    message: 'Successfully deleted channel.',
-                    type: 'success'
-                })
-            } else {
-                ElNotification({
-                    message: 'Failed: ' + res.data.message,
-                    type: 'error'
-                })
-            }
-        })
-        .catch(err => {
-            console.log(err);
-            ElNotification({
-                message: 'Failed to delete channel.',
-                type: 'error'
-            })
-        })
-        .finally(() => {
-            refreshChannelList();
-        })
-}
-
-function testChannelLatancy(channel_id) {
-    console.log(channel_id);
-
-    for (let i = 0; i < channelList.value.length; i++) {
-        if (channelList.value[i].id == channel_id) {
-            channelList.value[i].loading = true;
-            break
+    ElMessageBox.confirm(
+        'Are you sure you want to delete this channel?',
+        'Warning',
+        {
+            confirmButtonText: 'OK',
+            cancelButtonText: 'Cancel',
+            type: 'warning',
         }
-    }
-
-    axios.post('/api/channel/test/' + channel_id)
-        .then(res => {
-            console.log(res);
-
-            if (res.data.code == 0) {
-                
-                for (let i = 0; i < channelList.value.length; i++) {
-                    if (channelList.value[i].id == channel_id) {
-                        channelList.value[i].loading = false;
-                        channelList.value[i].latency = parseInt(res.data.data.latency*100)/100;
-                        break
-                    }
-                }
-            } else {
-                ElNotification({
-                    message: 'Failed: ' + res.data.message +" Channel: "+channel_id,
-                    type: 'error'
-                })
-                
-                for (let i = 0; i < channelList.value.length; i++) {
-                    if (channelList.value[i].id == channel_id) {
-                        channelList.value[i].loading = false;
-                        channelList.value[i].latency = -1;
-                        break
-                    }
-                }
-            }
-        })
-        .catch(err => {
-            console.log(err);
-            ElNotification({
-                message: 'Failed to test channel.',
-                type: 'error'
-            })
-            for (let i = 0; i < channelList.value.length; i++) {
-                if (channelList.value[i].id == channel_id) {
-                    channelList.value[i].loading = false;
-                    channelList.value[i].latency = -1
-                    break
-                }
-            }
-        })
-}
-
-function testAllChannelLatancy() {
-    var interval = 750;
-
-    scheduling.value = true;
-    for (let i = 0; i < channelList.value.length; i++) {
-
-        setTimeout(() => {
-            testChannelLatancy(channelList.value[i].id)
-        }, i*interval);
-
-    }
-
-    setTimeout(() => {
-        scheduling.value = false;
-    }, channelList.value.length*interval);
-}
-
-function enableChannel(channel_id) {
-    axios.post('/api/channel/enable/' + channel_id)
-        .then(res => {
-            console.log(res);
-            if (res.data.code == 0) {
-                ElNotification({
-                    message: 'Successfully enabled channel.',
-                    type: 'success'
-                })
-                refreshChannelList();
-            } else {
-                ElNotification({
-                    message: 'Failed: ' + res.data.message,
-                    type: 'error'
-                })
-            }
-        })
-        .catch(err => {
-            console.log(err);
-            ElNotification({
-                message: 'Failed to enable channel.',
-                type: 'error'
-            })
-        })
-}
-
-function disableChannel(channel_id) {
-    axios.post('/api/channel/disable/' + channel_id)
-        .then(res => {
-            console.log(res);
-            if (res.data.code == 0) {
-                ElNotification({
-                    message: 'Successfully disabled channel.',
-                    type: 'success'
-                })
-                refreshChannelList();
-            } else {
-                ElNotification({
-                    message: 'Failed: ' + res.data.message,
-                    type: 'error'
-                })
-            }
-        })
-        .catch(err => {
-            console.log(err);
-            ElNotification({
-                message: 'Failed to disable channel.',
-                type: 'error'
-            })
-        })
-}
-
-// Функция для удаления отключенных каналов
-function deleteDisabledChannels() {
-    const disabledChannels = channelList.value.filter(channel => !channel.enabled);
-    disabledChannels.forEach(channel => deleteChannelConfirmed(channel.id));
-}
-
-// channel details/creation dialog
-const detailsDialogVisible = ref(false);
-const showingChannelIndex = ref(-1); // -1 when creating a new channel
-const showingChannelData = reactive({
-    "details": {
-        "id": "0", // -1 if this is a new channel
-        "name": "name_of_this_channel",
-        "adapter": {
-            "type": "adapter_name", // get from /api/adapter/list
-            "config": `{}` // configuration
-        },
-        "model_mapping": `{
-            "reqModelName": "targetModelName"
-        }`,
-        "enabled": true, // no need for creation
-        "latency": 0.13 // no need for creation
-    }
-});
-const usableAdapterList = ref([]);
-const usableAdapterMap = ref({
-    "Deepinfra/Deepinfra-API": {
-        "name": "Deepinfra/Deepinfra-API",
-        "config_comment": "Config comment here."
-    },
-})
-
-function getUsableAdapterList() {
-    axios.get('/api/adapter/list')
-        .then(res => {
-            console.log(res);
-            usableAdapterList.value = res.data.data;
-
-            for (let i = 0; i < usableAdapterList.value.length; i++) {
-                usableAdapterMap.value[usableAdapterList.value[i].name] = usableAdapterList.value[i];
-            }
-        })
-        .catch(err => {
-            console.log(err);
-            ElNotification({
-                message: 'Failed to get usable adapter list.',
-                type: 'error'
-            })
-        })
-}
-
-function showDetails(channel_id) {
-    for (let i = 0; i < channelList.value.length; i++) {
-        if (channelList.value[i].id == channel_id) {
-            // get the details of the channel
-
-            axios.get('/api/channel/details/' + channel_id)
-                .then(res => {
-                    console.log(res);
-                    showingChannelData.details = res.data.data;
-                    showingChannelIndex.value = i;
-                    detailsDialogVisible.value = true;
-
-                    showingChannelData.details.adapter.config = JSON.stringify(showingChannelData.details.adapter.config, null, 4);
-                    showingChannelData.details.model_mapping = JSON.stringify(showingChannelData.details.model_mapping, null, 4);
-                })
-                .catch(err => {
-                    console.log(err);
+    )
+    .then(() => {
+        axios.delete('/api/channel/delete/' + channel_id)
+            .then(res => {
+                if (res.data.code == 0) {
                     ElNotification({
-                        message: 'Failed to get channel details.',
+                        message: 'Successfully deleted channel.',
+                        type: 'success'
+                    });
+                    refreshChannelList();
+                } else {
+                    ElNotification({
+                        message: 'Failed: ' + res.data.message,
                         type: 'error'
-                    })
-                })
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                ElNotification({
+                    message: 'Failed to delete channel.',
+                    type: 'error'
+                });
+            });
+    })
+    .catch(() => {
+        ElNotification({
+            type: 'info',
+            message: 'Delete canceled'
+        });
+    });
+}
 
-            break;
-        }
+function testChannelLatency(channel_id) {
+    const channel = channelList.value.find(c => c.id === channel_id);
+    if (channel) {
+        channel.loading = true;
+        axios.post('/api/channel/test/' + channel_id)
+            .then(res => {
+                if (res.data.code == 0) {
+                    channel.loading = false;
+                    channel.latency = parseFloat(res.data.data.latency).toFixed(2);
+                } else {
+                    ElNotification({
+                        message: 'Failed: ' + res.data.message + " Channel: " + channel_id,
+                        type: 'error'
+                    });
+                    channel.loading = false;
+                    channel.latency = -1;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                ElNotification({
+                    message: 'Failed to test channel.',
+                    type: 'error'
+                });
+                channel.loading = false;
+                channel.latency = -1;
+            });
     }
+}
+
+function testAllChannelLatency() {
+    scheduling.value = true;
+    const promises = channelList.value.map((channel, index) => 
+        new Promise(resolve => {
+            setTimeout(() => {
+                testChannelLatency(channel.id);
+                resolve();
+            }, index * 750);
+        })
+    );
+
+    Promise.all(promises).then(() => {
+        scheduling.value = false;
+    });
+}
+
+function toggleChannelStatus(channel) {
+    const action = channel.enabled ? 'disable' : 'enable';
+    axios.post(`/api/channel/${action}/${channel.id}`)
+        .then(res => {
+            if (res.data.code == 0) {
+                ElNotification({
+                    message: `Successfully ${action}d channel.`,
+                    type: 'success'
+                });
+                channel.enabled = !channel.enabled;
+            } else {
+                ElNotification({
+                    message: 'Failed: ' + res.data.message,
+                    type: 'error'
+                });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            ElNotification({
+                message: `Failed to ${action} channel.`,
+                type: 'error'
+            });
+        });
+}
+
+function deleteSelectedChannels() {
+    if (selectedChannels.value.length === 0) {
+        ElNotification({
+            message: 'No channels selected.',
+            type: 'warning'
+        });
+        return;
+    }
+
+    ElMessageBox.confirm(
+        `Are you sure you want to delete ${selectedChannels.value.length} selected channels?`,
+        'Warning',
+        {
+            confirmButtonText: 'OK',
+            cancelButtonText: 'Cancel',
+            type: 'warning',
+        }
+    )
+    .then(() => {
+        const deletePromises = selectedChannels.value.map(channelId => 
+            axios.delete('/api/channel/delete/' + channelId)
+        );
+
+        Promise.all(deletePromises)
+            .then(() => {
+                ElNotification({
+                    message: 'Successfully deleted selected channels.',
+                    type: 'success'
+                });
+                refreshChannelList();
+                selectedChannels.value = [];
+            })
+            .catch(err => {
+                console.error(err);
+                ElNotification({
+                    message: 'Failed to delete some channels.',
+                    type: 'error'
+                });
+            });
+    })
+    .catch(() => {
+        ElNotification({
+            type: 'info',
+            message: 'Delete canceled'
+        });
+    });
+}
+
+function exportChannelData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(channelList.value));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "channel_data.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
 }
 
 function showCreateChannelDialog() {
     showingChannelIndex.value = -1;
     showingChannelData.details = {
-        "id": "0", // -1 if this is a new channel
-        "name": "",
-        "adapter": {
-            "type": "Deepinfra/Deepinfra-API", // get from /api/adapter/list
-            "config": `{}` // configuration
+        id: "0",
+        name: "",
+        adapter: {
+            type: "Deepinfra/Deepinfra-API",
+            config: "{}"
         },
-        "model_mapping": `{}`,
-        "enabled": true, // no need for creation
-        "latency": -1 // no need for creation
+        model_mapping: "{}",
+        enabled: true,
+        latency: -1
     };
     detailsDialogVisible.value = true;
 }
 
+function showDetails(channel_id) {
+    const channelIndex = channelList.value.findIndex(c => c.id === channel_id);
+    if (channelIndex !== -1) {
+        axios.get('/api/channel/details/' + channel_id)
+            .then(res => {
+                showingChannelData.details = res.data.data;
+                showingChannelIndex.value = channelIndex;
+                detailsDialogVisible.value = true;
+
+                showingChannelData.details.adapter.config = JSON.stringify(showingChannelData.details.adapter.config, null, 4);
+                showingChannelData.details.model_mapping = JSON.stringify(showingChannelData.details.model_mapping, null, 4);
+            })
+            .catch(err => {
+                console.error(err);
+                ElNotification({
+                    message: 'Failed to get channel details.',
+                    type: 'error'
+                });
+            });
+    }
+}
+
 function validateChannel() {
-    if (showingChannelData.details.model_mapping == "") {
-        showingChannelData.details.model_mapping = `{}`
+    if (showingChannelData.details.model_mapping === "") {
+        showingChannelData.details.model_mapping = "{}";
     }
 
-    if (showingChannelData.details.adapter.type == "") {
+    if (showingChannelData.details.adapter.type === "") {
         ElNotification({
             message: 'Please select an adapter.',
             type: 'error'
-        })
+        });
         return false;
     }
 
-    if (showingChannelData.details.adapter.config == "") {
-        showingChannelData.details.adapter.config = `{}`
+    if (showingChannelData.details.adapter.config === "") {
+        showingChannelData.details.adapter.config = "{}";
     }
 
-    if (showingChannelData.details.name == "") {
+    if (showingChannelData.details.name === "") {
         ElNotification({
             message: 'Channel name is required.',
             type: 'error'
-        })
+        });
         return false;
     }
 
-    // check if model_mapping and  adapter.config are valid json
     try {
-        showingChannelData.details.model_mapping = JSON.parse(showingChannelData.details.model_mapping);
+        JSON.parse(showingChannelData.details.model_mapping);
     } catch (e) {
         ElNotification({
             message: 'Model mapping is not a valid JSON.',
             type: 'error'
-        })
+        });
         return false;
     }
 
     try {
-        showingChannelData.details.adapter.config = JSON.parse(showingChannelData.details.adapter.config);
+        JSON.parse(showingChannelData.details.adapter.config);
     } catch (e) {
         ElNotification({
             message: 'Adapter config is not a valid JSON.',
             type: 'error'
-        })
+        });
         return false;
     }
 
@@ -376,164 +333,202 @@ function validateChannel() {
 }
 
 function applyChannelDetails() {
-    console.log(showingChannelData);
-
     if (!validateChannel()) {
-        if (typeof showingChannelData.details.model_mapping === 'object') {
-            showingChannelData.details.model_mapping = JSON.stringify(showingChannelData.details.model_mapping, null, 4);
-        }
-        if (typeof showingChannelData.details.adapter.config === 'object') {
-            showingChannelData.details.adapter.config = JSON.stringify(showingChannelData.details.adapter.config, null, 4);
-        }
         return;
     }
 
-    if (showingChannelIndex.value == -1) { // create new
-        axios.post('/api/channel/create', showingChannelData.details)
-            .then(res => {
-                console.log(res);
+    const channelData = {
+        ...showingChannelData.details,
+        adapter: {
+            ...showingChannelData.details.adapter,
+            config: JSON.parse(showingChannelData.details.adapter.config)
+        },
+        model_mapping: JSON.parse(showingChannelData.details.model_mapping)
+    };
 
-                if (res.data.code == 0) {
-                    ElNotification({
-                        message: 'Successfully created channel.',
-                        type: 'success'
-                    })
-                    detailsDialogVisible.value = false;
-                    refreshChannelList();
-                } else {
-                    ElNotification({
-                        message: 'Failed: ' + res.data.message,
-                        type: 'error'
-                    })
-                }
-            })
-            .catch(err => {
-                console.log(err);
+    const isNewChannel = showingChannelIndex.value === -1;
+    const apiCall = isNewChannel
+        ? axios.post('/api/channel/create', channelData)
+        : axios.put('/api/channel/update/' + channelData.id, channelData);
+
+    apiCall
+        .then(res => {
+            if (res.data.code === 0) {
                 ElNotification({
-                    message: 'Failed to create channel.',
-                    type: 'error'
-                })
-            })
-            .finally(() => {
-                // reset model_mapping and adapter.config to string
-                showingChannelData.details.model_mapping = JSON.stringify(showingChannelData.details.model_mapping, null, 4);
-                showingChannelData.details.adapter.config = JSON.stringify(showingChannelData.details.adapter.config, null, 4);
-            })
-    } else {
-        axios.put('/api/channel/update/' + showingChannelData.details.id, showingChannelData.details)
-            .then(res => {
-                console.log(res);
-                if (res.data.code == 0) {
-                    ElNotification({
-                        message: 'Successfully updated channel.',
-                        type: 'success'
-                    })
-                    detailsDialogVisible.value = false;
-                    refreshChannelList();
-                } else {
-                    ElNotification({
-                        message: 'Failed: ' + res.data.message,
-                        type: 'error'
-                    })
-                }
-            })
-            .catch(err => {
-                console.log(err);
+                    message: `Successfully ${isNewChannel ? 'created' : 'updated'} channel.`,
+                    type: 'success'
+                });
+                detailsDialogVisible.value = false;
+                refreshChannelList();
+            } else {
                 ElNotification({
-                    message: 'Failed to update channel.',
+                    message: 'Failed: ' + res.data.message,
                     type: 'error'
-                })
-            })
-            .finally(() => {
-                // reset model_mapping and adapter.config to string
-                showingChannelData.details.model_mapping = JSON.stringify(showingChannelData.details.model_mapping, null, 4);
-                showingChannelData.details.adapter.config = JSON.stringify(showingChannelData.details.adapter.config, null, 4);
-            })
-    }
+                });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            ElNotification({
+                message: `Failed to ${isNewChannel ? 'create' : 'update'} channel.`,
+                type: 'error'
+            });
+        })
+        .finally(() => {
+            showingChannelData.details.model_mapping = JSON.stringify(JSON.parse(showingChannelData.details.model_mapping), null, 4);
+            showingChannelData.details.adapter.config = JSON.stringify(JSON.parse(showingChannelData.details.adapter.config), null, 4);
+        });
 }
 
+onMounted(() => {
+    refreshChannelList();
+    axios.get('/api/adapter/list')
+        .then(res => {
+            usableAdapterList.value = res.data.data;
+            usableAdapterMap.value = Object.fromEntries(
+                usableAdapterList.value.map(adapter => [adapter.name, adapter])
+            );
+        })
+        .catch(err => {
+            console.error(err);
+            ElNotification({
+                message: 'Failed to get usable adapter list.',
+                type: 'error'
+            });
+        });
+});
 </script>
 
 <template>
-    <div id="overall_container">
-        <div id="channel_operation_bar" :style="{ width: channelContainerWidth }">
-            <el-button type="success" :icon="DocumentAdd" @click="showCreateChannelDialog">Add</el-button>
-            <el-button type="success" v-loading="loading" element-loading-svg-view-box="-25, -25, 100, 100" :icon="Refresh" @click="refreshChannelList">Refresh</el-button>
-            <el-button type="success" v-loading="scheduling" element-loading-svg-view-box="-25, -25, 100, 100" :icon="Timer" @click="testAllChannelLatancy">Test All</el-button>
-            <el-button type="danger" :icon="Delete" @click="deleteDisabledChannels">Delete Disabled Channels</el-button>
-        </div>
-        <div id="channel_list_container" :style="{ width: channelContainerWidth }">
-            <div class="chan">
-                <text class="channel_id chan_title_text">ID</text>
-                <text class="channel_name chan_title_text">Channel Name</text>
-                <text class="channel_adapter chan_title_text">Adapter</text>
-                <text class="channel_latency chan_title_text">Latency</text>
-                <span class="op_container chan_title_text">
-                    Operation
-                </span>
-            </div>
-            <div class="chan" v-for="channel in channelList">
-                <text class="channel_id">{{ channel.id }}</text>
-                <text class="channel_name">{{ channel.name }}</text>
-                <text class="channel_adapter">
-                    <text class="channel_adapter_box" :style="{ 'border-left-color': adapter_color[channel.adapter] }">{{
-                        channel.adapter }}</text>
-                </text>
-                <text class="channel_latency">
-                    <el-button class="channel_latency_box" @click="testChannelLatancy(channel.id)"
-                        v-loading="channel.loading"  element-loading-svg-view-box="-35, -35, 120, 120" 
-                        :type="channel.latency > 0 ? 'success' : 'default'" plain>{{ channel.latency >= 0 ? channel.latency +
-                            's' :
-                            'N/A' }}</el-button>
-                </text>
-                <span class="op_container">
-                    <el-button class="op_switch" :type="!channel.enabled ? 'success' : 'danger'"
-                        @click="channel.enabled ? disableChannel(channel.id) : enableChannel(channel.id)">{{ channel.enabled
-                            ?
-                            'Disable' : 'Enable' }}</el-button>
-                    <el-button class="op_edit" @click="showDetails(channel.id)">{{ 'Edit' }}</el-button>
-                    <el-popconfirm title="Are you sure to delete this channel?"
-                        @confirm="deleteChannelConfirmed(channel.id)">
-                        <template #reference>
-                            <el-button class="op_delete" :icon="Delete" />
-                        </template>
-                    </el-popconfirm>
-                </span>
-            </div>
-        </div>
+    <div class="channel-manager">
+        <el-card class="toolbar">
+            <el-row :gutter="20">
+                <el-col :xs="24" :sm="8" :md="6" :lg="4" :xl="4">
+                    <el-input
+                        v-model="searchQuery"
+                        placeholder="Search channels"
+                        prefix-icon="Search"
+                    />
+                </el-col>
+                <el-col :xs="24" :sm="16" :md="18" :lg="20" :xl="20">
+                    <el-button-group>
+                        <el-button type="primary" @click="showCreateChannelDialog" :icon="DocumentAdd">
+                            Add Channel
+                        </el-button>
+                        <el-button type="success" @click="refreshChannelList" :icon="Refresh" :loading="loading">
+                            Refresh
+                        </el-button>
+                        <el-button type="warning" @click="testAllChannelLatency" :icon="Timer" :loading="scheduling">
+                            Test All
+                        </el-button>
+                        <el-button type="danger" @click="deleteSelectedChannels" :icon="Delete" :disabled="selectedChannels.length === 0">
+                            Delete Selected
+                        </el-button>
+                        <el-button type="info" @click="exportChannelData" :icon="Download">
+                            Export Data
+                        </el-button>
+                    </el-button-group>
+                </el-col>
+            </el-row>
+        </el-card>
 
-        <el-dialog v-model="detailsDialogVisible"
-            :title="showingChannelIndex >= 0 ? 'Channel #' + channelList[showingChannelIndex].id : 'New Channel'">
-            <el-form :model="showingChannelData.details">
+        <el-table
+            :data="filteredChannels"
+            style="width: 100%"
+            @selection-change="selectedChannels = $event.map(item => item.id)"
+            v-loading="loading"
+        >
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="id" label="ID" width="80" sortable />
+            <el-table-column prop="name" label="Name" sortable />
+            <el-table-column prop="adapter" label="Adapter" sortable>
+                <template #default="scope">
+                    <el-tag :type="scope.row.adapter === 'Deepinfra/Deepinfra-API' ? 'primary' : 'success'">
+                        {{ scope.row.adapter }}
+                    </el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="latency" label="Latency" width="120" sortable>
+                <template #default="scope">
+                    <el-button 
+                        @click="testChannelLatency(scope.row.id)"
+                        :loading="scope.row.loading"
+                        :type="scope.row.latency > 0 ? 'success' : 'info'"
+                        size="small"
+                    >
+                        {{ scope.row.latency >= 0 ? scope.row.latency + 's' : 'N/A' }}
+                    </el-button>
+                </template>
+            </el-table-column>
+            <el-table-column label="Operations" width="300">
+                <template #default="scope">
+                    <el-button-group>
+                        <el-button 
+                            :type="scope.row.enabled ? 'danger' : 'success'"
+                            @click="toggleChannelStatus(scope.row)"
+                            size="small"
+                        >
+                            {{ scope.row.enabled ? 'Disable' : 'Enable' }}
+                        </el-button>
+                        <el-button 
+                            type="primary"
+                            @click="showDetails(scope.row.id)"
+                            :icon="Edit"
+                            size="small"
+                        >
+                            Edit
+                        </el-button>
+                        <el-button 
+                            type="danger"
+                            @click="deleteChannelConfirmed(scope.row.id)"
+                            :icon="Delete"
+                            size="small"
+                        />
+                    </el-button-group>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <el-dialog 
+            v-model="detailsDialogVisible"
+            :title="showingChannelIndex >= 0 ? 'Edit Channel' : 'New Channel'"
+            width="50%"
+        >
+            <el-form :model="showingChannelData.details" label-width="120px">
                 <el-form-item label="Name">
                     <el-input v-model="showingChannelData.details.name" />
                 </el-form-item>
                 <el-form-item label="Adapter">
                     <el-select v-model="showingChannelData.details.adapter.type">
-                        <el-option v-for="adapter in usableAdapterList" :key="adapter.name" :label="adapter.name"
-                            :value="adapter.name" />
+                        <el-option 
+                            v-for="adapter in usableAdapterList" 
+                            :key="adapter.name" 
+                            :label="adapter.name" 
+                            :value="adapter.name" 
+                        />
                     </el-select>
                 </el-form-item>
-
                 <el-form-item label="Config">
-                    <el-input v-model="showingChannelData.details.adapter.config" rows="8" type="textarea" />
-                    <el-popover placement="bottom" :title="showingChannelData.details.adapter.type" :width="700" trigger="click">
-                        <template #reference>
-                            <el-button class="m-2">Config Comment</el-button>
-                        </template>
-                        <pre>{{ usableAdapterMap[showingChannelData.details.adapter.type].config_comment }}</pre>
-                    </el-popover>
+                    <el-input 
+                        v-model="showingChannelData.details.adapter.config" 
+                        type="textarea" 
+                        :rows="5"
+                    />
                 </el-form-item>
-
                 <el-form-item label="Model Mapping">
-                    <el-input v-model="showingChannelData.details.model_mapping" rows="5" type="textarea" />
+                    <el-input 
+                        v-model="showingChannelData.details.model_mapping" 
+                        type="textarea" 
+                        :rows="5"
+                    />
                 </el-form-item>
             </el-form>
-
             <template #footer>
                 <span class="dialog-footer">
                     <el-button @click="detailsDialogVisible = false">Cancel</el-button>
-                    <el-button type="primary" @click="applyChannelDetails">Confirm</el-button>
+                    <el-button type="primary" @click="applyChannelDetails">
+                        {{ showingChannelIndex >= 0 ? 'Update' : 'Create' }}
+                    </el-button>
                 </span>
             </template>
         </el-dialog>
@@ -541,119 +536,33 @@ function applyChannelDetails() {
 </template>
 
 <style scoped>
-#overall_container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.4); */
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
+.channel-manager {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
-#channel_operation_bar {
-    position: relative;
-    display: flex;
-    margin-top: 0.4rem;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
+.toolbar {
+    margin-bottom: 20px;
 }
 
-#channel_list_container {
-    position: relative;
-    top: 0;
-    left: 0;
-    margin-top: 0.6rem;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
+.el-button-group {
+    margin-top: 10px;
 }
 
-.chan {
-    position: relative;
-    margin-block: 0.2rem;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    border-radius: 0.2rem;
-    display: flex;
-    padding-block: 0.5rem;
+@media (max-width: 768px) {
+    .el-button-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .el-button-group .el-button {
+        margin-left: 0 !important;
+        margin-top: 10px;
+    }
 }
 
-.text_center {
-    text-align: center;
-}
-
-.channel_id {
-    margin-left: 1rem;
-    font-size: 1.1rem;
-    font-weight: bold;
-    width: 3%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.channel_name {
-    margin-left: 1rem;
-    font-size: 0.9rem;
-    width: 20%;
-    /* font-weight: bold; */
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.channel_adapter {
-    margin-left: 1rem;
-    font-size: 0.9rem;
-    width: 32%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.channel_adapter_box {
-    position: relative;
-    /* border: 2px solid rgb(87, 218, 87); */
-    border-left-width: 8px;
-    border-left-style: solid;
-    padding: 0.2rem;
-    font-size: 1rem;
-}
-
-.channel_latency {
-    width: 9%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-.channel_latency_box {
-    position: relative;
-    /* border: 2px solid rgb(87, 218, 87); */
-    font-size: 1rem;
-    width: 90%;
-}
-
-.op_container {
-    position: relative;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    /* border: 2px solid; */
-    width: 30%;
-}
-
-.chan_title_text {
-    font-size: 0.8rem;
-    font-weight: bold;
-    text-align: center;
+.el-table {
+    margin-top: 20px;
 }
 </style>
