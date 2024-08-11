@@ -1,95 +1,146 @@
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import axios from "axios";
+import { ElSkeleton } from 'element-plus';
 
-const contentContainerWidth = ref("1000px");
+const version = ref("");
+const loading = ref(true);
 
-function recalcContentContainerWidth() {
-    contentContainerWidth.value =
-        document.documentElement.clientWidth > 1000 ? "1000px" : "100%";
-
-    console.log(contentContainerWidth.value);
-}
-
-const version_str = ref("")
-
-function getVersion(){
-    axios.get("/api/info/version").then((res) => {
-        version_str.value = res.data.data
-    })
+function getVersion() {
+    axios.get("/api/info/version")
+        .then((res) => {
+            version.value = res.data.data;
+            loading.value = false;
+        })
+        .catch(() => {
+            version.value = "Error";
+            loading.value = false;
+        });
 }
 
 onMounted(() => {
-    recalcContentContainerWidth();
-    getVersion()
+    getVersion();
 });
-
-onresize = () => {
-    recalcContentContainerWidth();
-};
-
 </script>
 
 <template>
-<div id="overall_container">
-    <div id="content_container" :style="{ width: contentContainerWidth }">
-        <div id="content">
-            <div id="content_header">
-                <h1>llm-api</h1>
-                <span v-if="version_str!=''" id="version_label">{{ version_str }}</span>
-            </div>
-            <div id="content_body">
-                <p>
-                    Makes reverse engineering LLM libs a OpenAI format API.
-                </p>
-                <p>
-                    Built by <a href="https://github.com/Metimol1">Metimol</a>
-                </p>
-            </div>
-        </div>
+    <div class="home">
+        <el-card class="home-card" :body-style="{ padding: '0px' }">
+            <el-skeleton :loading="loading" animated>
+                <template #template>
+                    <div style="padding: 20px">
+                        <el-skeleton-item variant="h1" style="width: 50%" />
+                        <el-skeleton-item variant="text" style="margin-top: 16px" />
+                        <el-skeleton-item variant="text" style="margin-top: 16px" />
+                    </div>
+                </template>
+                <template #default>
+                    <div class="card-content">
+                        <div class="header">
+                            <h1>llm-api</h1>
+                            <el-tag v-if="version" type="success" size="small" effect="dark">{{ version }}</el-tag>
+                        </div>
+                        <div class="body">
+                            <p>
+                                Makes reverse engineering LLM libs a OpenAI format API.
+                            </p>
+                            <p>
+                                Built by <a href="https://github.com/Metimol1" target="_blank" rel="noopener noreferrer">Metimol</a>
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <el-button type="primary" @click="$router.push('/channel')">Manage Channels</el-button>
+                            <el-button type="info" @click="$router.push('/apikey')">API Keys</el-button>
+                        </div>
+                    </div>
+                </template>
+            </el-skeleton>
+        </el-card>
     </div>
-</div>
 </template>
 
 <style scoped>
-#overall_container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.4); */
-    box-sizing: border-box;
+.home {
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
+    min-height: calc(100vh - 60px);
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
-#content_container {
-    position: relative;
-    top: 0;
-    left: 0;
-    margin-top: 0.6rem;
+.home-card {
     width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
 }
 
-#version_label {
-    position: absolute;
-    top: 0;
-    right: 0;
-    margin: 0.6rem;
-    font-size: 0.8rem;
+.home-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 7px 14px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card-content {
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    color: #303133;
+}
+
+.body {
+    margin-bottom: 20px;
+}
+
+.body p {
+    margin: 10px 0;
+    color: #606266;
+    line-height: 1.6;
+}
+
+.body a {
+    color: #409EFF;
+    text-decoration: none;
     font-weight: bold;
-    color: #ffffff;
-    background-color: #348de5;
-    padding-inline: 0.4rem;
-    border-radius: 0.2rem;
-    padding-block: 0.1rem;
+    transition: color 0.3s ease;
+}
+
+.body a:hover {
+    color: #66b1ff;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+@media (max-width: 600px) {
+    .home-card {
+        margin: 0 20px;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .footer {
+        flex-direction: column;
+    }
+
+    .footer .el-button {
+        width: 100%;
+    }
 }
 </style>
