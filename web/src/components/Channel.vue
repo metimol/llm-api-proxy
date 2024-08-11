@@ -19,7 +19,7 @@ const showingChannelData = reactive({
         id: "0",
         name: "",
         adapter: {
-            type: "Deepinfra/Deepinfra-API",
+            type: "xtekky/gpt4free",
             config: "{}"
         },
         model_mapping: "{}",
@@ -252,7 +252,7 @@ function showCreateChannelDialog() {
         id: "0",
         name: "",
         adapter: {
-            type: "Deepinfra/Deepinfra-API",
+            type: "xtekky/gpt4free",
             config: "{}"
         },
         model_mapping: "{}",
