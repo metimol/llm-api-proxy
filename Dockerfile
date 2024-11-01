@@ -2,16 +2,30 @@ FROM python:3.10.13-slim-bullseye
 
 WORKDIR /app
 
-# copy dist of web
-COPY ./web/dist /app/web/dist
-COPY ./free_one_api /app/free_one_api
-COPY ./requirements.txt ./main.py /app/
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# install git
-RUN apt-get update && apt-get install -y git
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 
-RUN pip install --no-cache -r requirements.txt \
-    && pip uninstall torch tensorflow transformers triton -y \
-    && rm -rf /usr/local/lib/python3.10/site-packages/nvidia*
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y torch tensorflow transformers triton && \
+    rm -rf /usr/local/lib/python3.10/site-packages/nvidia*
 
-CMD [ "python", "main.py" ]
+# Copy application code
+COPY ./web/dist ./web/dist
+COPY ./free_one_api ./free_one_api
+COPY main.py .
+
+# Create data directory
+RUN mkdir -p ./data
+
+# Set Python to run in unbuffered mode
+ENV PYTHONUNBUFFERED=1
+
+# Run application
+CMD ["python", "main.py"]
