@@ -85,8 +85,14 @@ class Channel:
         return num_tokens
     
     async def heartbeat(self, timeout: int=300) -> int:
-        """Call adapter test, returns fail count."""
+        """Call adapter test, returns fail count.
+    
+        Args:
+            timeout: Maximum time to wait for response in seconds
         
+        Returns:
+            Current fail count for this channel
+        """
         try:
             start = time.time()
             succ, err = await asyncio.wait_for(self.adapter.test(), timeout=timeout)
@@ -98,7 +104,10 @@ class Channel:
             else:
                 self.fail_count += 1
                 return self.fail_count
-        finally:
+        except asyncio.TimeoutError:
+            self.fail_count += 1
+            return self.fail_count
+        except Exception as e:
             self.fail_count += 1
             return self.fail_count
 
