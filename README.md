@@ -64,3 +64,59 @@ The application uses MySQL for database management. The database configuration c
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more details.
+
+### Using Docker Compose
+
+To build and run the application using Docker Compose, follow these steps:
+
+1. Ensure you have Docker and Docker Compose installed on your machine.
+
+2. Clone the repository:
+
+   ```bash
+   git clone https://github.com/metimol/llm-api-proxy.git
+   cd llm-api-proxy
+   ```
+
+3. Create a `docker-compose.yml` file in the root directory of the repository with the following content:
+
+   ```yaml
+   version: '3.8'
+
+   services:
+     app:
+       build:
+         context: .
+         dockerfile: Dockerfile
+       ports:
+         - "3000:3000"
+       environment:
+         DB_HOST: mysql
+         DB_PORT: 3306
+         DB_USER: root
+         DB_PASSWORD: example
+         DB_NAME: llm_api_proxy
+       depends_on:
+         - mysql
+
+     mysql:
+       image: mysql:8.0
+       environment:
+         MYSQL_ROOT_PASSWORD: example
+         MYSQL_DATABASE: llm_api_proxy
+       ports:
+         - "3306:3306"
+       volumes:
+         - mysql_data:/var/lib/mysql
+
+   volumes:
+     mysql_data:
+   ```
+
+4. Build and run the Docker containers:
+
+   ```bash
+   docker-compose up --build
+   ```
+
+5. The application will be available at `http://localhost:3000`.
