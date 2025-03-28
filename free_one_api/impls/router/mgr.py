@@ -14,7 +14,7 @@ class RouterManager:
     _app: quart.Quart
 
     def __init__(self, routes: list[tuple[str, list[str], callable, dict]], config: dict):
-        self.port = config["port"] if "port" in config else 3000
+        self.port = config["port"] if "port" in config else 3001
         self._app = quart.Quart(__name__)
 
         for route, methods, handler, kwargs in routes:
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             ("/<path:path>", ["GET"], static_proxy, {}),
         ],
         config={
-            "port": 3000
+            "port": 3001
         }
     )
     # api.serve()
