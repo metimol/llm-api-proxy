@@ -62,7 +62,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
                 "model": model,
                 "messages": [{"role": "user", "content": "Hi, respond 'Hello, world!' please."}],
             }
-            api_key = os.getenv("API_KEY")
+            api_key = self.config["key"]
             headers = {
                 "Authorization": f"Bearer {api_key}"
             }
@@ -87,7 +87,7 @@ For example: 'gpt4,gpt-4-o,gpt-4-turbo'
         random_int = random.randint(0, 1000000000)
 
         async with httpx.AsyncClient(timeout=None) as client:
-            api_key = os.getenv("API_KEY")
+            api_key = self.config["key"]
             headers = {
                 "Authorization": f"Bearer {api_key}"
             }
