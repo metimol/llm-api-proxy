@@ -51,6 +51,7 @@ onMounted(() => {
                         <div class="footer">
                             <el-button type="primary" @click="$router.push('/channel')">Manage Channels</el-button>
                             <el-button type="info" @click="$router.push('/apikey')">API Keys</el-button>
+                            <el-button type="success" @click="window.open('https://github.com/Metimol/llm-api-proxy', '_blank')">GitHub Repository</el-button>
                         </div>
                     </div>
                 </template>

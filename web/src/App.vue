@@ -53,6 +53,11 @@ function logout() {
                 </el-menu-item>
                 <el-menu-item index="channel" @click="switchTab('channel')">Channels</el-menu-item>
                 <el-menu-item index="apikey" @click="switchTab('apikey')">API Keys</el-menu-item>
+                <el-menu-item index="github">
+                    <a href="https://github.com/Metimol/llm-api-proxy" target="_blank" rel="noopener noreferrer">
+                        GitHub
+                    </a>
+                </el-menu-item>
                 <el-menu-item index="login" class="login-item">
                     <el-button 
                         :type="getPassword() === '' ? 'primary' : 'danger'"
