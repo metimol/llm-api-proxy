@@ -13,7 +13,6 @@ This software serves as a unified interface for interacting with different LLM a
 ### 📌 Prerequisites
 
 - 🐳 Docker
-- 📦 Docker Compose
 
 ### 🔧 Steps
 
@@ -24,10 +23,18 @@ This software serves as a unified interface for interacting with different LLM a
    cd llm-api-proxy
    ```
 
-2. Build and run the Docker containers:
+2. Build and run the Docker container:
 
    ```bash
-   docker-compose up --build
+   docker build -t llm-api-proxy .
+   docker run -d -p 3000:3000 \
+     -e DB_HOST=your_db_host \
+     -e DB_PORT=your_db_port \
+     -e DB_USER=your_db_user \
+     -e DB_PASSWORD=your_db_password \
+     -e DB_NAME=your_db_name \
+     -e password=your_api_key_here \
+     llm-api-proxy
    ```
 
 3. Access the application at: [`http://localhost:3000`](http://localhost:3000) 🌍
@@ -52,11 +59,10 @@ Replace `your_api_key_here` with your secret password. 🔏
 
 #### Set the `password` in Docker:
 
-Add the following line to the `environment` section of the `app` service in `docker-compose.yml`:
+Add the following line to the `docker run` command:
 
-```yaml
-environment:
-  - password=your_api_key_here
+```bash
+-e password=your_api_key_here
 ```
 
 Replace `your_api_key_here` with your secret password. 🔄
