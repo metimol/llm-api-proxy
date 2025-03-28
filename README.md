@@ -36,6 +36,27 @@ The purpose of this software is to provide a unified interface for interacting w
 
 The application configuration is stored in `./data/config.yaml`. If the file does not exist, it will be created automatically with default values.
 
+#### Setting the API Key
+
+The application requires an API key to interact with the OpenAI API. This key should be set as an environment variable named `API_KEY`. You can set this variable in your virtual environment or in the Docker container.
+
+To set the `API_KEY` environment variable in your virtual environment, use the following command:
+
+```bash
+export API_KEY=your_api_key_here
+```
+
+Replace `your_api_key_here` with your actual API key.
+
+To set the `API_KEY` environment variable in the Docker container, add the following line to the `environment` section of the `app` service in the `docker-compose.yml` file:
+
+```yaml
+environment:
+  - API_KEY=your_api_key_here
+```
+
+Replace `your_api_key_here` with your actual API key.
+
 ### Sending Requests
 
 You can send HTTP requests to the application using tools like `curl` or Postman. The main endpoint for sending requests is `/v1/chat/completions`.
