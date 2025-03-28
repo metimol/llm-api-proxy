@@ -1,19 +1,21 @@
-# LLM API Proxy
+# 🚀 LLM API Proxy
 
-LLM API Proxy is a versatile application designed to handle HTTP requests and responses for various Large Language Model (LLM) adapters. It supports multiple LLM adapters like GPT, GPT4Free, HuggingChat, and more. The application includes a web frontend and uses MySQL for database management.
+LLM API Proxy is a powerful and flexible application designed to manage HTTP requests and responses for various Large Language Model (LLM) adapters. It supports multiple adapters, including GPT, GPT4Free, HuggingChat, and more. With a built-in web frontend and MySQL database integration, it provides a seamless experience for developers. ✨
 
-## Purpose
+## 🎯 Purpose
 
-The purpose of this software is to provide a unified interface for interacting with different LLM adapters. It allows users to send requests to various LLMs and receive responses in a consistent format.
+This software serves as a unified interface for interacting with different LLM adapters. It allows users to send requests to various LLMs and receive responses in a consistent format. 📡
 
-## Deployment
+---
 
-### Prerequisites
+## 🚀 Deployment
 
-- Docker
-- Docker Compose
+### 📌 Prerequisites
 
-### Steps
+- 🐳 Docker
+- 📦 Docker Compose
+
+### 🔧 Steps
 
 1. Clone the repository:
 
@@ -28,40 +30,44 @@ The purpose of this software is to provide a unified interface for interacting w
    docker-compose up --build
    ```
 
-3. The application will be available at `http://localhost:3000`.
+3. Access the application at: [`http://localhost:3000`](http://localhost:3000) 🌍
 
-## Usage
+---
 
-### Configuration
+## ⚙️ Configuration
 
-The application configuration is stored in `./data/config.yaml`. If the file does not exist, it will be created automatically with default values.
+The configuration file is located at `./data/config.yaml`. If the file is missing, it will be automatically generated with default values. 🛠️
 
-#### Setting the API Key
+### 🔑 Setting the API Key
 
-The application requires an API key to interact with the OpenAI API. This key should be set as an environment variable named `API_KEY`. You can set this variable in your virtual environment or in the Docker container.
+To access the API and web interface, you need to set an API key as an environment variable named `password`. If no password is set, the default password is `123456789`. 🔐
 
-To set the `API_KEY` environment variable in your virtual environment, use the following command:
+#### Set the `password` in your terminal:
 
 ```bash
-export API_KEY=your_api_key_here
+export password=your_api_key_here
 ```
 
-Replace `your_api_key_here` with your actual API key.
+Replace `your_api_key_here` with your secret password. 🔏
 
-To set the `API_KEY` environment variable in the Docker container, add the following line to the `environment` section of the `app` service in the `docker-compose.yml` file:
+#### Set the `password` in Docker:
+
+Add the following line to the `environment` section of the `app` service in `docker-compose.yml`:
 
 ```yaml
 environment:
-  - API_KEY=your_api_key_here
+  - password=your_api_key_here
 ```
 
-Replace `your_api_key_here` with your actual API key.
+Replace `your_api_key_here` with your secret password. 🔄
 
-### Sending Requests
+---
 
-You can send HTTP requests to the application using tools like `curl` or Postman. The main endpoint for sending requests is `/v1/chat/completions`.
+## 📡 Sending Requests
 
-Example request:
+You can send HTTP requests using tools like `curl` or Postman. The primary endpoint for sending requests is `/v1/chat/completions`. 📩
+
+### 📝 Example request:
 
 ```bash
 curl -X POST http://localhost:3000/v1/chat/completions \
@@ -74,14 +80,20 @@ curl -X POST http://localhost:3000/v1/chat/completions \
          }'
 ```
 
-### Web Frontend
+---
 
-The application includes a web frontend located in the `web` directory. You can access it at `http://localhost:3000`.
+## 🌐 Web Frontend
 
-### Database Management
+The application comes with a web frontend located in the `web` directory. You can access it at [`http://localhost:3000`](http://localhost:3000). 🖥️
 
-The application uses MySQL for database management. The database configuration can be found in the `./data/config.yaml` file.
+---
 
-## License
+## 🗄️ Database Management
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+LLM API Proxy uses MySQL for database management. Configuration details can be found in `./data/config.yaml`. 🗃️
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License. See the [`LICENSE`](LICENSE) file for more details. 📄
